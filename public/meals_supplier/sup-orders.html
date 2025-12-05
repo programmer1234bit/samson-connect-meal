@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incoming Orders | Supplier — Samson Connect Meals</title>
+    <style>
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f4f4f8; 
+            display: flex; 
+            min-height: 100vh; 
+        }
+        .sidebar { 
+            width: 250px; 
+            background: #1a1a1a; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 20px; 
+            box-shadow: 3px 0 12px rgba(0,0,0,0.3); 
+        }
+        .sidebar h2 { 
+            margin: 0 0 30px 0; 
+            font-size: 22px; 
+            color: #ff6600; 
+            text-align: center; 
+        }
+        .sidebar a { 
+            color: white; 
+            text-decoration: none; 
+            padding: 12px 15px; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+            display: block; 
+            transition: 0.3s; 
+        }
+        .sidebar a:hover, .sidebar a.active { 
+            background: #ff6600; 
+            color: black; 
+        }
+        .main { 
+            flex: 1; 
+            padding: 30px; 
+            overflow-x: auto; /* For table on mobile */
+        }
+        .main h1 { 
+            color: #ff6600; 
+            margin-bottom: 20px; 
+        }
+        .cards { 
+            display: flex; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+            margin-bottom: 20px; 
+        }
+        .card { 
+            flex: 1 1 200px; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            text-align: center; 
+            transition: transform 0.3s; 
+        }
+        .card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25); 
+        }
+        .card h3 { 
+            margin-bottom: 10px; 
+            color: #ff6600; 
+            font-size: 0.9rem; 
+        }
+        .card p { 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            margin: 0; 
+            color: #333; 
+        }
+        .table-filter { 
+            margin-bottom: 20px; 
+            display: flex; 
+            gap: 10px; 
+            flex-wrap: wrap; 
+        }
+        .table-filter button { 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            background: #ff6600; 
+            color: white; 
+            transition: 0.3s; 
+            font-size: 0.9rem; 
+        }
+        .table-filter button.active, .table-filter button:hover { 
+            background: #e65c00; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            background: white; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); 
+            min-width: 600px; /* Prevent too-narrow on mobile */
+        }
+        table th, table td { 
+            padding: 12px 15px; 
+            border-bottom: 1px solid #ddd; 
+            text-align: left; 
+        }
+        table th { 
+            background: #ff6600; 
+            color: white; 
+            position: sticky; top: 0; 
+        }
+        table tr:hover { 
+            background: #f9f9f9; 
+        }
+        /* Status Badge Styling */
+        .status-badge { 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+        }
+        .status-pending { 
+            background: #fff3cd; 
+            color: #856404; 
+            border: 1px solid #ffeaa7; 
+        }
+        .status-completed { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        .status-cancelled { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        .btn { 
+            padding: 6px 12px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            margin-right: 5px; 
+            margin-bottom: 2px; 
+            transition: 0.3s; 
+        }
+        .btn:hover { 
+            opacity: 0.8; 
+        }
+        .btn-view { 
+            background: #2196F3; 
+            color: white; 
+        }
+        .btn-complete { 
+            background: #4caf50; 
+            color: white; 
+        }
+        .btn-cancel { 
+            background: #f44336; 
+            color: white; 
+        }
+        .search-box { 
+            margin-bottom: 20px; 
+        }
+        .search-box input { 
+            width: 100%; 
+            padding: 10px; 
+            border-radius: 6px; 
+            border: 1px solid #ccc; 
+            max-width: 300px; 
+            font-size: 1rem; 
+        }
+        /* Empty State */
+        #emptyState { 
+            display: none; 
+            text-align: center; 
+            padding: 40px 20px; 
+            color: #666; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            margin-top: 20px; 
+        }
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .sidebar { width: 200px; }
+            .main { padding: 20px; }
+            .cards { flex-direction: column; gap: 10px; }
+            .table-filter { justify-content: center; }
+            .search-box input { max-width: 100%; }
+            table { font-size: 0.85rem; min-width: 100%; }
+            table th, table td { padding: 8px 6px; }
+            .main { overflow-x: auto; }
+        }
+
+        /* modal styles */
+        #mapModal {
+          position: fixed;
+          inset: 0;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0,0,0,0.6);
+          z-index: 2000;
+        }
+        #mapModal.open { display:flex; }
+        #mapModal .modal-content {
+          width: 95%;
+          max-width: 900px;
+          background: #fff;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        }
+        #mapModal .modal-header {
+          display:flex; justify-content:space-between; align-items:center;
+          padding:12px 16px; background:#ff6600; color:#fff;
+        }
+        #mapModal .modal-body { padding:0; }
+        #orderMap { width:100%; height:420px; }
+        #mapInfo { padding:12px 16px; font-size:0.95rem; color:#333; }
+        #mapModal .close-btn {
+          background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;
+        }
+        .delivery-marker {
+          display:block;
+          width:18px;
+          height:18px;
+          border-radius:50%;
+          background:#ff3b30;
+          border:2px solid #fff;
+          box-shadow:0 2px 6px rgba(0,0,0,0.25);
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <div class="sidebar" role="navigation" aria-label="Supplier menu">
+        <h2>👨‍🍳 Supplier</h2>
+        <a href="sup-dashboard.html" >Dashboard</a>
+        <a href="sup-orders.html"  class="active">Incoming Orders</a>
+        <a href="sup-meals.html">My Meals</a>
+        <a href="sup-stats.html">Analytics</a>
+        <a href="sup-profile.html">Profile</a>
+        <a href="#" onclick="logout()">Logout</a>
+    </div>
+
+    <div class="main">
+        <h1>Incoming Orders</h1>
+
+        <!-- Dashboard Cards -->
+        <div class="cards">
+            <div class="card">
+                <h3>Total Orders</h3>
+                <p id="totalOrders">0</p>
+            </div>
+            <div class="card">
+                <h3>Total Revenue</h3>
+                <p id="totalRevenue">TZS 0</p>
+            </div>
+            <div class="card">
+                <h3>Pending Orders</h3>
+                <p id="pendingOrders">0</p>
+            </div>
+            <div class="card">
+                <h3>Completed Orders</h3>
+                <p id="completedOrders">0</p>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="table-filter">
+            <button class="active" onclick="filterStatus('all')" aria-label="Show all orders">All Orders</button>
+            <button onclick="filterStatus('Pending')" aria-label="Show pending orders">Pending</button>
+            <button onclick="filterStatus('Completed')" aria-label="Show completed orders">Completed</button>
+            <button onclick="filterStatus('Cancelled')" aria-label="Show cancelled orders">Cancelled</button>
+        </div>
+
+        <!-- Search -->
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search orders by customer or meal..." onkeyup="filterOrders()" aria-label="Search orders">
+        </div>
+
+        <!-- Orders Table -->
+        <table id="ordersTable" role="table" aria-label="Orders table">
+            <thead>
+                <tr>
+                    <th scope="col">Order ID</th>
+                    <th scope="col">Customer</th>
+                    <th scope="col">Meal</th>
+                    <th scope="col">Price (TZS)</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody role="rowgroup">
+                <!-- Orders will be injected here -->
+            </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div id="emptyState">
+            <h3>No orders found</h3>
+            <p>Pending orders will appear here. Try adjusting your search or filters.</p>
+        </div>
+    </div>
+
+    <!-- Map Modal -->
+    <div id="mapModal" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
+      <div class="modal-content" role="document">
+        <div class="modal-header">
+          <div id="mapModalTitle">Order Location</div>
+          <button class="close-btn" aria-label="Close map" onclick="closeMapModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="orderMap" aria-label="Order map"></div>
+          <div id="mapInfo"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let ordersData = [];
+        let currentStatus = 'all';
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Map status to badge class (handles variations like 'confirmed')
+        function getStatusBadge(status) {
+            const cls = (status || 'Pending').toLowerCase();
+            let badgeClass = 'status-pending';
+            if (cls.includes('completed') || cls.includes('confirmed')) badgeClass = 'status-completed';
+            else if (cls.includes('cancelled') || cls.includes('canceled')) badgeClass = 'status-cancelled';
+            return `<span class="status-badge ${badgeClass}" aria-label="Status: ${status}">${status}</span>`;
+        }
+
+        // Use supplier-specific API endpoint
+        async function fetchOrders() {
+            try {
+                const res = await fetch('/api/sup/orders'); // relative path
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                
+                // Handle both array and paginated/wrapped response
+                ordersData = Array.isArray(data) ? data : (data.orders || data.data || []);
+                
+                if (!Array.isArray(ordersData)) {
+                    console.warn('⚠️ Unexpected supplier orders response:', data);
+                    ordersData = [];
+                }
+
+                // Normalize field names
+                ordersData = ordersData.map(order => ({
+                    ...order,
+                    id: order.id || order.order_id || 'N/A',
+                    customer: order.customer || order.user_id || 'Unknown',
+                    meal: order.meal || order.meal_name || 'N/A',
+                    total_price: order.total_price || (order.price * (order.quantity || 1) || 0),
+                    status: order.status || 'Pending',
+                    price: order.price || 0,
+                    quantity: order.quantity || 1,
+                    delivery_address: order.delivery_address || order.address || '',
+                    user_coords: order.user_coords || order.userCoords || null,
+                    supplier_lat: order.supplier_lat || null,
+                    supplier_lng: order.supplier_lng || null
+                }));
+
+                console.log('✅ Fetched orders from supplier API:', ordersData);
+            } catch (err) {
+                console.warn('⚠️ Supplier API failed, using empty fallback:', err);
+                ordersData = [];
+            }
+            renderOrders();
+        }
+
+        // normalize comparison helper (case-insensitive)
+        function statusEquals(a, b) {
+            if (!a || !b) return false;
+            return String(a).toLowerCase() === String(b).toLowerCase();
+        }
+
+        // Render orders in table (handles flattened data)
+        function renderOrders() {
+            const tbody = document.querySelector('#ordersTable tbody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            const searchValue = (document.getElementById('searchInput').value || '').toLowerCase();
+
+            const filteredOrders = ordersData.filter(o => {
+                const statusMatch = currentStatus === 'all' || statusEquals(o.status, currentStatus);
+                const searchMatch = (o.customer || '').toLowerCase().includes(searchValue) || (o.meal || '').toLowerCase().includes(searchValue);
+                return statusMatch && searchMatch;
+            });
+
+            if (filteredOrders.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+            emptyState.style.display = 'none';
+
+            filteredOrders.forEach(order => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${order.id}</td>
+                    <td>${escapeHtml(order.customer || 'N/A')}</td>
+                    <td>${escapeHtml(order.meal || 'N/A')}</td>
+                    <td>TZS ${Number(order.total_price || 0).toLocaleString()}</td>
+                    <td>${getStatusBadge(order.status)}</td>
+                    <td>
+                        <button class="btn btn-view" onclick="viewOrder(${order.id})" aria-label="View order ${order.id}">View</button>
+                        ${statusEquals(order.status,'Pending') ? `<button class="btn btn-complete" onclick="updateStatus(${order.id}, 'Completed')" aria-label="Mark order ${order.id} as completed">Complete</button>` : ''}
+                        ${statusEquals(order.status,'Pending') ? `<button class="btn btn-cancel" onclick="updateStatus(${order.id}, 'Cancelled')" aria-label="Cancel order ${order.id}">Cancel</button>` : ''}
+                        <!-- No delete for suppliers -->
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update dashboard cards (handle flattened data with unique IDs)
+            const uniqueOrders = [...new Map(ordersData.map(o => [o.id, o])).values()];
+            document.getElementById('totalOrders').textContent = uniqueOrders.length;
+            const totalRevenue = uniqueOrders.reduce((sum, o) => sum + parseInt(o.total_price || 0), 0);
+            document.getElementById('totalRevenue').textContent = 'TZS ' + totalRevenue.toLocaleString();
+            document.getElementById('pendingOrders').textContent = uniqueOrders.filter(o => statusEquals(o.status,'Pending')).length;
+            document.getElementById('completedOrders').textContent = uniqueOrders.filter(o => statusEquals(o.status,'Completed')).length;
+        }
+
+        // Update status against supplier API namespace
+        async function updateStatus(id, status) {
+            try {
+                const res = await fetch(`/api/sup/orders/${id}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                if (!res.ok) throw new Error('Update failed');
+                alert(`Order status updated to ${status} ✅`);
+                await fetchOrders();
+            } catch (err) {
+                console.error('❌ Update error:', err);
+                alert('Failed to update order ❌');
+            }
+        }
+
+        // Fix filter regex bug and wire buttons robustly
+        function filterStatus(status) {
+            currentStatus = status;
+            document.querySelectorAll('.table-filter button').forEach(btn => btn.classList.remove('active'));
+            const selector = status === 'all' ? '.table-filter button:first-child' : `.table-filter button[onclick="filterStatus('${status}')"]`;
+            let activeBtn = document.querySelector(selector);
+            if (!activeBtn) {
+                activeBtn = Array.from(document.querySelectorAll('.table-filter button')).find(b => b.textContent.trim().toLowerCase() === String(status).toLowerCase());
+            }
+            if (activeBtn) activeBtn.classList.add('active');
+            renderOrders();
+        }
+
+        /*
+          Load Google Maps script dynamically using the server-provided key.
+          Returns a promise that resolves when google.maps is available.
+        */
+        let googleMapsLoaded = false;
+        function loadGoogleMapsApi() {
+          if (googleMapsLoaded && window.google && window.google.maps) return Promise.resolve(window.google.maps);
+
+          // If another load is in progress, wait for it (use existing window.__gmapsLoaderPromise if set)
+          if (window.__gmapsLoaderPromise) return window.__gmapsLoaderPromise;
+
+          window.__gmapsLoaderPromise = fetch('/api/config/maps-key')
+            .then(r => {
+              if (!r.ok) throw new Error('no maps key');
+              return r.json();
+            })
+            .then(data => {
+              if (!data || !data.key) throw new Error('no maps key returned');
+              return new Promise((resolve, reject) => {
+                // create script tag to load Google Maps JS
+                const callbackName = '__onGmapsLoaded';
+                window[callbackName] = () => {
+                  googleMapsLoaded = true;
+                  resolve(window.google.maps);
+                  // cleanup
+                  try { delete window[callbackName]; } catch(e){ window[callbackName]=null; }
+                };
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=${callbackName}`;
+                script.async = true;
+                script.defer = true;
+                script.onerror = (err) => {
+                  reject(new Error('Failed to load Google Maps'));
+                };
+                document.head.appendChild(script);
+              });
+            });
+
+          return window.__gmapsLoaderPromise;
+        }
+
+        // Attempt to extract coordinates from order object
+        function extractCoords(order) {
+          // 1) user_coords as object or JSON string: { lat, lng } or { latitude, longitude }
+          const tryParse = v => {
+            if (!v) return null;
+            if (typeof v === 'object' && v.lat && v.lng) return { lat: Number(v.lat), lng: Number(v.lng) };
+            if (typeof v === 'object' && v.latitude && v.longitude) return { lat: Number(v.latitude), lng: Number(v.longitude) };
+            if (typeof v === 'string') {
+              try {
+                const p = JSON.parse(v);
+                return tryParse(p);
+              } catch (e) { return null; }
+            }
+            return null;
+          };
+
+          const candidates = [
+            tryParse(order.user_coords),
+            tryParse(order.userCoords),
+            (order.delivery_lat && order.delivery_lng) ? { lat: Number(order.delivery_lat), lng: Number(order.delivery_lng) } : null,
+            (order.lat && order.lng) ? { lat: Number(order.lat), lng: Number(order.lng) } : null,
+            (order.location && order.location.lat && order.location.lng) ? { lat: Number(order.location.lat), lng: Number(order.location.lng) } : null
+          ];
+
+          for (const c of candidates) {
+            if (c && !Number.isNaN(c.lat) && !Number.isNaN(c.lng)) return c;
+          }
+          return null;
+        }
+
+        // Render using Google Maps (simple markers + fitBounds)
+        function renderGoogleMap(supplierCoords, customerCoords) {
+          const container = document.getElementById('orderMap');
+          // ensure container empty
+          container.innerHTML = '';
+
+          orderMapMarkers = [];
+
+          // create map centered between points if both available
+          const center = customerCoords || supplierCoords || { lat: -6.7924, lng: 39.2083 };
+          orderMap = new google.maps.Map(container, {
+            center,
+            zoom: 14,
+            fullscreenControl: true,
+            streetViewControl: true
+          });
+
+          // supplier marker
+          const supMarker = new google.maps.Marker({
+            position: supplierCoords,
+            map: orderMap,
+            title: 'Supplier'
+          });
+          orderMapMarkers.push(supMarker);
+
+          if (customerCoords) {
+            const custMarker = new google.maps.Marker({
+              position: customerCoords,
+              map: orderMap,
+              title: 'Customer'
+            });
+            orderMapMarkers.push(custMarker);
+
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(supplierCoords);
+            bounds.extend(customerCoords);
+            orderMap.fitBounds(bounds);
+          } else {
+            orderMap.setCenter(supplierCoords);
+          }
+        }
+
+        // Existing Leaflet render function (keeps the previously implemented code)
+        function renderLeafletMap(supplierCoords, customerCoords) {
+          // instantiate Leaflet map
+          orderMap = L.map('orderMap', { zoomControl: true, attributionControl: false });
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(orderMap);
+
+          const supplierMarker = L.marker([supplierCoords.lat, supplierCoords.lng], { title: 'Supplier' }).addTo(orderMap);
+          orderMapMarkers.push(supplierMarker);
+
+          if (customerCoords) {
+            const customerMarker = L.marker([customerCoords.lat, customerCoords.lng], {
+              title: 'Customer',
+              icon: L.icon({ iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', iconSize: [25,41], iconAnchor:[12,41] })
+            }).addTo(orderMap);
+            orderMapMarkers.push(customerMarker);
+
+            const bounds = L.latLngBounds([ [supplierCoords.lat, supplierCoords.lng], [customerCoords.lat, customerCoords.lng] ]);
+            orderMap.fitBounds(bounds.pad(0.2));
+          } else {
+            orderMap.setView([supplierCoords.lat, supplierCoords.lng], 14);
+          }
+        }
+
+        // New helper: try to get supplier fixed coords from multiple sources
+        async function fetchSupplierCoords(supplierName, order) {
+          // 1) prefer coords present on the order object (explicit fields)
+          if (order) {
+            if (order.supplier_lat && order.supplier_lng) {
+              return { lat: Number(order.supplier_lat), lng: Number(order.supplier_lng) };
+            }
+            if (order.supplier_coords) {
+              const parsed = (typeof order.supplier_coords === 'string') ? (() => { try { return JSON.parse(order.supplier_coords); } catch(e){ return null } })() : order.supplier_coords;
+              if (parsed && (parsed.lat || parsed.latitude)) {
+                return { lat: Number(parsed.lat || parsed.latitude), lng: Number(parsed.lng || parsed.longitude) };
+              }
+            }
+          }
+
+          // 2) attempt to query supplier-specific API (optional endpoint on server)
+          if (supplierName) {
+            try {
+              const res = await fetch(`/api/sup/supplier-location?name=${encodeURIComponent(supplierName)}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data && (data.lat || data.latitude) && (data.lng || data.longitude)) {
+                  return { lat: Number(data.lat || data.latitude), lng: Number(data.lng || data.longitude) };
+                }
+              }
+            } catch (e) {
+              // ignore - fallback to next step
+              console.warn('supplier location API failed', e);
+            }
+          }
+
+          // 3) last-resort: do NOT use browser geolocation (we want fixed supplier location).
+          // Instead fall back to a sensible default (Dar es Salaam center)
+          return { lat: -6.7924, lng: 39.2083 };
+        }
+
+        // viewOrder now async: get supplier fixed coords then render map (Google first, Leaflet fallback)
+        async function viewOrder(id) {
+          const order = ordersData.find(o => String(o.id) === String(id) || String(o.cart_id) === String(id) || String(o.id) === `cart-${id}`);
+          if (!order) {
+            alert('Order details not found.');
+            return;
+          }
+
+          const modal = document.getElementById('mapModal');
+          const info = document.getElementById('mapInfo');
+
+          // Customer coordinates (from order)
+          const customerCoords = extractCoords(order);
+
+          // Supplier coordinates: fetch fixed supplier location (server or order fields). Do NOT read user's current location.
+          let supplierCoords = await fetchSupplierCoords(order.supplier || order.supplier_name, order);
+
+          modal.classList.add('open');
+          document.body.style.overflow = 'hidden';
+
+          const custAddr = order.delivery_address || order.address || (order.items && order.items[0] && order.items[0].delivery_address) || '';
+          info.innerHTML = `
+            <strong>Order:</strong> ${escapeHtml(String(order.id))} &nbsp;
+            <strong>Customer:</strong> ${escapeHtml(order.customer || 'N/A')}<br>
+            <strong>Address:</strong> ${escapeHtml(custAddr || 'Not provided')}<br>
+            <small style="color:#666">Close map to return to the list.</small>
+          `;
+
+          // Try Google Maps, otherwise fallback to Leaflet
+          loadGoogleMapsApi()
+            .then(() => {
+              if (window.google && window.google.maps) {
+                renderGoogleMap(supplierCoords, customerCoords);
+              } else {
+                renderLeafletMap(supplierCoords, customerCoords);
+              }
+            })
+            .catch((err) => {
+              console.warn('Google Maps load failed, using Leaflet fallback:', err);
+              if (typeof L !== 'undefined') {
+                renderLeafletMap(supplierCoords, customerCoords);
+              } else {
+                const c = document.getElementById('orderMap');
+                c.innerHTML = '<div style="padding:20px;color:#c00">Map unavailable (no mapping libraries loaded).</div>';
+              }
+            });
+
+          // after the map is rendered successfully, start tracking the deliverer
+          // we attempt to start tracking regardless of whether driver coords are currently available
+          startTracking(id, 5000);
+        }
+
+        /* close modal by clicking overlay */
+        document.getElementById('mapModal').addEventListener('click', (e) => {
+          if (e.target && e.target.id === 'mapModal') closeMapModal();
+        });
+
+        function closeMapModal() {
+          const modal = document.getElementById('mapModal');
+          modal.classList.remove('open');
+
+          // stop tracking when modal closes
+          stopTracking();
+
+          // cleanup markers and map to avoid memory leaks
+          if (orderMap) {
+            try {
+              // remove delivery marker if google
+              if (deliveryMarker && window.google && window.google.maps && deliveryMarker.setMap) {
+                deliveryMarker.setMap(null);
+              }
+            } catch(e){}
+            orderMapMarkers.forEach(m => {
+              try { if (m.remove) m.remove(); else if (m.setMap) m.setMap(null); } catch(e){}
+            });
+            orderMapMarkers = [];
+            try { orderMap.remove(); } catch(e){}
+            orderMap = null;
+            // recreate DOM node for future maps
+            const container = document.getElementById('orderMap');
+            container.innerHTML = '';
+          }
+          document.body.style.overflow = '';
+        }
+
+        // Ensure global map state variables exist
+        let orderMap = null;
+        let orderMapMarkers = [];
+        let mapPolyline = null;
+        let trackingTimer = null;
+        let deliveryMarker = null;
+        let deliveryAnimationFrame = null;
+
+        /* Robust single-order fetch: try /api/sup/orders/:id then fall back to list */
+        async function fetchOrderById(orderId) {
+          // try single-order endpoint first
+          try {
+            const res = await fetch(`/api/sup/orders/${encodeURIComponent(orderId)}`);
+            if (res.ok) {
+              const data = await res.json();
+              // if API returns array or object handle both
+              if (Array.isArray(data)) return data.find(o => String(o.id) === String(orderId)) || null;
+              return data;
+            }
+          } catch (e) {
+            // ignore and fallback
+          }
+
+          // fallback: fetch list and pick the item
+          try {
+            const res2 = await fetch('/api/sup/orders');
+            if (!res2.ok) return null;
+            const list = await res2.json();
+            return (Array.isArray(list) ? list.find(o => String(o.id)===String(orderId) || String(o.id)===`cart-${orderId}`) : null) || null;
+          } catch (e) {
+            console.warn('fetchOrderById fallback failed', e);
+            return null;
+          }
+        }
+
+        /* Smoothly update/create delivery marker (Leaflet or Google) */
+        function updateDeliveryMarkerSmooth(coords) {
+          if (!coords) {
+            if (deliveryMarker) {
+              try { if (deliveryMarker.setMap) deliveryMarker.setMap(null); else deliveryMarker.remove(); } catch(e){}
+              deliveryMarker = null;
+            }
+            return;
+          }
+
+          // Google Maps
+          if (window.google && window.google.maps && orderMap && orderMap instanceof google.maps.Map) {
+            const pos = new google.maps.LatLng(coords.lat, coords.lng);
+            if (!deliveryMarker) {
+              deliveryMarker = new google.maps.Marker({
+                position: pos,
+                map: orderMap,
+                title: 'Deliverer',
+                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#ff0000', fillOpacity: 1, strokeWeight: 1 }
+              });
+            } else {
+              // simple smooth move: lerp latitude/longitude in a few frames
+              const start = deliveryMarker.getPosition();
+              const startLat = start.lat(), startLng = start.lng();
+              const endLat = coords.lat, endLng = coords.lng;
+              const steps = 8;
+              let i = 0;
+              if (deliveryAnimationFrame) { cancelAnimationFrame(deliveryAnimationFrame); deliveryAnimationFrame = null; }
+              const step = () => {
+                i++;
+                const t = i/steps;
+                const lat = startLat + (endLat - startLat)*t;
+                const lng = startLng + (endLng - startLng)*t;
+                deliveryMarker.setPosition(new google.maps.LatLng(lat, lng));
+                if (i < steps) deliveryAnimationFrame = requestAnimationFrame(step);
+              };
+              step();
+            }
+            return;
+          }
+
+          // Leaflet
+          if (typeof L !== 'undefined' && orderMap && orderMap.remove === undefined === false) {
+            const latlng = [coords.lat, coords.lng];
+            if (!deliveryMarker) {
+              deliveryMarker = L.marker(latlng, {
+                title: 'Deliverer',
+                icon: L.divIcon({ className: 'delivery-marker' })
+              }).addTo(orderMap);
+            } else {
+              // animate by moving in small steps
+              if (deliveryAnimationFrame) { cancelAnimationFrame(deliveryAnimationFrame); deliveryAnimationFrame = null; }
+              const from = deliveryMarker.getLatLng();
+              const to = L.latLng(coords.lat, coords.lng);
+              const frames = 10;
+              let f = 0;
+              const animate = () => {
+                f++;
+                const lat = from.lat + (to.lat - from.lat) * (f/frames);
+                const lng = from.lng + (to.lng - from.lng) * (f/frames);
+                deliveryMarker.setLatLng([lat, lng]);
+                if (f < frames) deliveryAnimationFrame = requestAnimationFrame(animate);
+              };
+              animate();
+            }
+            return;
+          }
+
+          // fallback: do nothing
+        }
+
+        /* Poll order periodically and update deliverer marker + info */
+        async function pollOrderForDriver(orderId) {
+          try {
+            const order = await fetchOrderById(orderId);
+            if (!order) return;
+            // attempt to find driver coords in several fields
+            const driverCandidates = [
+              order.driver_coords, order.driverCoords, order.rider_coords, order.riderCoords,
+              order.deliverer_coords, order.delivererCoords,
+              (order.driver_lat && order.driver_lng) ? { lat: order.driver_lat, lng: order.driver_lng } : null,
+              (order.delivery_lat && order.delivery_lng) ? { lat: order.delivery_lat, lng: order.delivery_lng } : null
+            ];
+            let driverCoords = null;
+            for (const c of driverCandidates) {
+              const parsed = extractCoords({ user_coords: c, userCoords: c, delivery_lat: (c && c.lat), delivery_lng: (c && c.lng) });
+              if (parsed) { driverCoords = parsed; break; }
+            }
+            // update marker smoothly
+            updateDeliveryMarkerSmooth(driverCoords);
+
+            // update map info if API provides ETA/status
+            try {
+              const mi = document.getElementById('mapInfo');
+              if (mi && order.status) mi.querySelector && (mi.innerHTML = `${mi.innerHTML}<div style="margin-top:6px;color:#333">Status: ${escapeHtml(order.status)} ${order.eta? ' • ETA '+order.eta+' min':''}</div>`);
+            } catch(e){}
+          } catch (e) {
+            console.warn('pollOrderForDriver error', e);
+          }
+        }
+
+        function startTracking(orderId, intervalMs = 5000) {
+          stopTracking();
+          pollOrderForDriver(orderId);
+          trackingTimer = setInterval(() => pollOrderForDriver(orderId), intervalMs);
+        }
+
+        function stopTracking() {
+          if (trackingTimer) { clearInterval(trackingTimer); trackingTimer = null; }
+          if (deliveryAnimationFrame) { cancelAnimationFrame(deliveryAnimationFrame); deliveryAnimationFrame = null; }
+          if (deliveryMarker) {
+            try { if (deliveryMarker.setMap) deliveryMarker.setMap(null); else deliveryMarker.remove(); } catch(e){}
+            deliveryMarker = null;
+          }
+        }
+
+        // wire controls and initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) searchInput.addEventListener('input', () => renderOrders());
+
+            document.querySelectorAll('.table-filter button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const onclick = btn.getAttribute('onclick') || '';
+                    const match = onclick.match(/filterStatus\('([^']+)'\)/);
+                    const status = match ? match[1] : btn.textContent.trim();
+                    filterStatus(status);
+                });
+            });
+
+            fetchOrders();
+        });
+    </script>
+</body>
+</html>

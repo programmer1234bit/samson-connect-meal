@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supplier Analytics | Samson Connect Meals</title>
+<!-- load Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f8; display: flex; min-height: 100vh; color: #1a1a1a; }
+  .sidebar { width: 250px; background: #1a1a1a; color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 3px 0 12px rgba(0,0,0,0.3); }
+  .sidebar h2 { margin:0 0 30px 0; font-size: 22px; color: #ff6600; text-align:center; }
+  .sidebar a { color:white; text-decoration:none; padding:12px 15px; border-radius:8px; margin-bottom:10px; display:block; transition:0.3s; }
+  .sidebar a:hover, .sidebar a.active { background:#ff6600; color:black; }
+  
+  .main { flex:1; padding:30px; }
+  .main h1 { color:#ff6600; margin-bottom:20px; }
+
+  .cards { display:flex; flex-wrap:wrap; gap:20px; margin-bottom:30px; }
+  .card { flex:1 1 200px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); text-align:center; transition: transform 0.3s; }
+  .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
+  .card h3 { margin-bottom:10px; color:#ff6600; }
+  .card p { font-size:1.4em; font-weight:bold; }
+
+  .charts { display:flex; flex-wrap:wrap; gap:30px; }
+  .chart-container { flex:1 1 400px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+  
+  @media(max-width:768px){ .main{padding:15px;} .cards,.charts{flex-direction:column;} }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>👨‍🍳 Supplier</h2>
+  <a href="sup-dashboard.html">Dashboard</a>
+  <a href="sup-orders.html">Incoming Orders</a>
+  <a href="sup-meals.html">My Meals</a>
+  <a href="sup-stats.html" class="active">Analytics</a>
+  <a href="sup-profile.html">Profile</a>
+  <a href="#" onclick="logout()">Logout</a>
+</div>
+
+<div class="main">
+  <h1>Analytics Dashboard</h1>
+
+  <div class="cards">
+    <div class="card">
+      <h3>Total Orders</h3>
+      <p id="totalOrders">0</p>
+    </div>
+    <div class="card">
+      <h3>Completed Orders</h3>
+      <p id="completedOrders">0</p>
+    </div>
+    <div class="card">
+      <h3>Pending Orders</h3>
+      <p id="pendingOrders">0</p>
+    </div>
+    <div class="card">
+      <h3>Total Revenue (TZS)</h3>
+      <p id="totalRevenue">0</p>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-container">
+      <h3>Orders Over Time</h3>
+      <canvas id="ordersChart"></canvas>
+    </div>
+    <div class="chart-container">
+      <h3>Popular Meals</h3>
+      <canvas id="popularMealsChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+	// Utility: last N days labels
+	function lastNDaysLabels(n) {
+		const labels = [];
+		for (let i = n - 1; i >= 0; i--) {
+			const d = new Date();
+			d.setDate(d.getDate() - i);
+			labels.push(d.toISOString().slice(0, 10)); // YYYY-MM-DD
+		}
+		return labels;
+	}
+
+	// Aggregate analytics from API response
+	function computeAnalytics(rows) {
+		const totalOrders = rows.length;
+		let pending = 0, completed = 0, cancelled = 0, revenue = 0;
+
+		// orders by day map
+		const labels = lastNDaysLabels(7);
+		const ordersByDay = labels.reduce((acc, l) => (acc[l] = 0, acc), {});
+
+		// popular meals map
+		const mealsMap = new Map();
+
+		for (const r of rows) {
+			const st = String((r.status || r.raw_status || 'Pending')).toLowerCase();
+			if (st.includes('pending')) pending++;
+			else if (st.includes('complete') || st.includes('completed') || st.includes('deliv') || st.includes('paid')) completed++;
+			else if (st.includes('cancel')) cancelled++;
+
+			// Add revenue (total_price may be number or string)
+			const tp = Number(r.total_price || 0);
+			if (!Number.isNaN(tp)) revenue += tp;
+
+			// date bucket
+			const created = r.created_at ? new Date(r.created_at) : null;
+			if (created) {
+				const key = created.toISOString().slice(0,10);
+				if (ordersByDay[key] !== undefined) ordersByDay[key] += 1;
+			}
+
+			// items can be array or flattened meal field
+			if (Array.isArray(r.items) && r.items.length) {
+				for (const it of r.items) {
+					const name = String(it.name || it.title || it.meal || 'Unknown');
+					const qty = Number(it.qty || it.quantity || 1) || 1;
+					mealsMap.set(name, (mealsMap.get(name) || 0) + qty);
+				}
+			} else if (r.meal) {
+				const name = String(r.meal);
+				mealsMap.set(name, (mealsMap.get(name) || 0) + 1);
+			}
+		}
+
+		// top meals sorted
+		const popularMeals = [...mealsMap.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+		return {
+			totalOrders, pending, completed, cancelled, revenue,
+			ordersByDayLabels: labels,
+			ordersByDayData: labels.map(l => ordersByDay[l] || 0),
+			popularMealsLabels: popularMeals.map(x=>x[0]),
+			popularMealsData: popularMeals.map(x=>x[1])
+		};
+	}
+
+	// Chart instances holder
+	let ordersChart = null, mealsChart = null;
+
+	function renderCharts(analytics) {
+		// Orders over time (line)
+		const ctx1 = document.getElementById('ordersChart').getContext('2d');
+		if (ordersChart) ordersChart.destroy();
+		ordersChart = new Chart(ctx1, {
+			type: 'line',
+			data: {
+				labels: analytics.ordersByDayLabels,
+				datasets: [{
+					label: 'Orders',
+					data: analytics.ordersByDayData,
+					borderColor: '#ff6600',
+					backgroundColor: 'rgba(255,102,0,0.15)',
+					fill: true,
+					tension: 0.3
+				}]
+			},
+			options: { responsive: true, plugins:{ legend:{ display:false } } }
+		});
+
+		// Popular meals (bar)
+		const ctx2 = document.getElementById('popularMealsChart').getContext('2d');
+		if (mealsChart) mealsChart.destroy();
+		mealsChart = new Chart(ctx2, {
+			type: 'bar',
+			data: {
+				labels: analytics.popularMealsLabels,
+				datasets: [{
+					label: 'Orders',
+					data: analytics.popularMealsData,
+					backgroundColor: '#ff9900'
+				}]
+			},
+			options: { indexAxis: 'y', responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true } } }
+		});
+	}
+
+	// Update numeric cards
+	function updateCards(analytics) {
+		document.getElementById('totalOrders').textContent = analytics.totalOrders;
+		document.getElementById('completedOrders').textContent = analytics.completed;
+		document.getElementById('pendingOrders').textContent = analytics.pending;
+		document.getElementById('totalRevenue').textContent = 'TZS ' + analytics.revenue.toLocaleString();
+	}
+
+	// Fetch and render
+	async function loadSupplierStats() {
+		try {
+			const res = await fetch('/api/sup/orders');
+			let rows = [];
+			if (res.ok) rows = await res.json();
+			else throw new Error('API returned ' + res.status);
+			// rows should combine carts (pending) and orders (completed/cancelled)
+			const analytics = computeAnalytics(rows);
+			updateCards(analytics);
+			renderCharts(analytics);
+		} catch (err) {
+			console.error('Failed to load supplier stats', err);
+			// fallback sample analytics (graceful)
+			const sampleRows = [
+				{ id: 'cart-1', customer:'A', meal:'Ugali', total_price:5000, status:'Pending', created_at: new Date().toISOString() },
+				{ id: 10, customer:'B', items:[{name:'Rice', qty:2}], total_price:12000, status:'Completed', created_at: new Date().toISOString() }
+			];
+			const analytics = computeAnalytics(sampleRows);
+			updateCards(analytics);
+			renderCharts(analytics);
+		}
+	}
+
+	// Initial
+	document.addEventListener('DOMContentLoaded', () => {
+		loadSupplierStats();
+		// refresh every 5 minutes
+		setInterval(loadSupplierStats, 300000);
+	});
+</script>
+
+  <script>
+    function logout() {
+      if(confirm("Are you sure you want to logout?")) {
+        window.location.href = "../sign up.html";
+      }
+    }
+  </script>
+
+</body>
+</html>

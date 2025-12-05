@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meals Menu | Samson Connect Meals</title>
+    <style>
+        body {margin:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f4f4f8; display:flex; min-height:100vh;}
+        .sidebar {width:250px; background:#1a1a1a; color:white; display:flex; flex-direction:column; padding:20px; box-shadow:3px 0 12px rgba(0,0,0,0.3);}
+        .sidebar h2 {margin:0 0 30px 0; font-size:22px; color:#ff6600; text-align:center;}
+        .sidebar a {color:white; text-decoration:none; padding:12px 15px; border-radius:8px; margin-bottom:10px; display:block; transition:0.3s;}
+        .sidebar a:hover, .sidebar a.active {background:#ff6600; color:black;}
+        .main {flex:1; padding:30px;}
+        .main h1 {color:#ff6600; margin-bottom:20px;}
+        .cards {display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;}
+        .card {flex:1 1 200px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); text-align:center; transition:transform 0.3s;}
+        .card:hover {transform:translateY(-5px); box-shadow:0 8px 20px rgba(0,0,0,0.25);}
+        .card h3 {margin-bottom:10px; color:#ff6600;}
+        .table-filter {margin-bottom:20px;}
+        .table-filter button {padding:8px 16px; border:none; border-radius:6px; cursor:pointer; margin-right:10px; background:#ff6600; color:white; transition:0.3s;}
+        .table-filter button.active, .table-filter button:hover {background:#e65c00;}
+        table {width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+        table th, table td {padding:12px 15px; border-bottom:1px solid #ddd; text-align:left;}
+        table th {background:#ff6600; color:white;}
+        table tr:hover {background:#f9f9f9;}
+        .btn {padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:14px;}
+        .btn-edit {background:#4caf50; color:white;}
+        .btn-delete {background:#f44336; color:white;}
+        .search-box {margin-bottom:20px;}
+        .search-box input {width:100%; padding:10px; border-radius:6px; border:1px solid #ccc;}
+        .add-meal-form {background:white; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+        .add-meal-form input, .add-meal-form select {padding:10px; width:100%; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;}
+        .add-meal-form button {padding:10px 20px; background:#ff6600; color:white; border:none; border-radius:6px; cursor:pointer; transition:0.3s;}
+        .add-meal-form button:hover {background:#e65c00;}
+    </style>
+    <script src="/theme.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <a href="admin.html">Dashboard</a>
+        <a href="users.html">User Management</a>
+        <a href="orders.html">Orders</a>
+        <a href="meals.html" class="active">Meals Menu</a>
+        <a href="analytics.html">Analytics</a>
+        <a href="settings.html">Settings</a>
+        <a href="messages.html">Messages</a>
+    </div>
+
+    <div class="main">
+        <h1>Meals Menu</h1>
+
+        <div class="cards">
+            <div class="card">
+                <h3>Total Meals</h3>
+                <p id="totalMeals">0</p>
+            </div>
+            <div class="card">
+                <h3>Total Meal Supplier(s)</h3>
+                <p id="totalSuppliers">0</p>
+            </div>
+            <div class="card">
+                <h3>Available Meals</h3>
+                <p id="availableMeals">0</p>
+            </div>
+            <div class="card">
+                <h3>Unavailable Meals</h3>
+                <p id="unavailableMeals">0</p>
+            </div>
+        </div>
+
+        <div class="add-meal-form">
+            <h3>Add New Meal</h3>
+            <input type="text" id="mealName" placeholder="Meal Name">
+            <input type="text" id="mealSupplier" placeholder="Supplier (Mama Ntilie)">
+            <input type="number" id="mealPrice" placeholder="Price (TZS)">
+            <select id="mealStatus">
+                <option value="Available">Available</option>
+                <option value="Unavailable">Unavailable</option>
+            </select>
+            <input type="text" id="mealCategory" placeholder="Category (street/restaurant/beverages)">
+            <input type="text" id="mealImage" placeholder="Image URL (optional)">
+            <button onclick="addMeal()">Add Meal</button>
+        </div>
+
+        <div class="table-filter">
+            <button class="active" onclick="filterMeals('all')">All Meals</button>
+            <button onclick="filterMeals('Available')">Available</button>
+            <button onclick="filterMeals('Unavailable')">Unavailable</button>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search meals by name or supplier..." onkeyup="renderMeals()">
+        </div>
+        
+        <div id="previewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center;">
+          <img id="previewImage" src="" alt="" style="max-width:80%; max-height:80%; border-radius:12px;">
+        </div>
+
+        <table id="mealsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Meal Name</th>
+                    <th>Supplier</th>
+                    <th>Price (TZS)</th>
+                    <th>Category</th>
+                    <th>Image</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        let meals = [];
+        let currentFilter = 'all';
+
+        document.addEventListener('click', e => {
+            if(e.target.tagName === 'IMG' && e.target.closest('tbody')) {
+                document.getElementById('previewImage').src = e.target.src;
+                document.getElementById('previewModal').style.display = 'flex';
+            }
+        });
+        document.getElementById('previewModal').onclick = () => {
+            document.getElementById('previewModal').style.display = 'none';
+        };
+
+        // FETCH meals from backend
+        async function fetchMeals() {
+            try {
+                const res = await fetch('http://localhost:5000/api/admin/menu');
+                meals = await res.json();
+                renderMeals();
+            } catch (err) {
+                console.error('Failed to fetch meals ❌', err);
+            }
+        }
+
+        // RENDER meals
+        function renderMeals() {
+            const tbody = document.querySelector('#mealsTable tbody');
+            tbody.innerHTML = '';
+
+            // Apply filter before rendering
+            let filteredMeals = meals;
+            if (currentFilter !== 'all') {
+                filteredMeals = meals.filter(m => (m.status || 'Available') === currentFilter);
+            }
+
+            // Apply search filter
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            if (searchTerm) {
+                filteredMeals = filteredMeals.filter(m =>
+                    m.name.toLowerCase().includes(searchTerm) ||
+                    (m.supplier && m.supplier.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            // Render rows
+            filteredMeals.forEach(meal => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${meal.id}</td>
+                    <td>${meal.name}</td>
+                    <td>${meal.supplier || 'N/A'}</td>
+                    <td>TZS ${meal.price.toLocaleString()}</td>
+                    <td>${meal.category}</td>
+                    <td>${meal.image_url ? `<img src="${meal.image_url}" alt="${meal.name}" style="width:50px; height:50px; border-radius:6px;">` : 'No image'}</td>
+                    <td>${meal.status || 'Available'}</td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editMeal(${meal.id})">Edit</button>
+                        <button class="btn btn-delete" onclick="deleteMeal(${meal.id})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update cards
+            document.getElementById('totalMeals').textContent = meals.length;
+            
+            // ✅ Count unique suppliers with meals
+            const suppliers = [...new Set(meals.map(m => m.supplier))].filter(s => s !== 'N/A');
+            document.getElementById('totalSuppliers').textContent = suppliers.length;
+            
+            document.getElementById('availableMeals').textContent = meals.filter(m => m.status === 'Available').length;
+            document.getElementById('unavailableMeals').textContent = meals.filter(m => m.status === 'Unavailable').length;
+        }
+
+        // FILTER meals
+        function filterMeals(status) {
+            currentFilter = status;
+            document.querySelectorAll('.table-filter button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.table-filter button[onclick="filterMeals('${status}')"]`).classList.add('active');
+            renderMeals();
+        }
+
+        // ADD meal
+        async function addMeal() {
+            const payload = {
+                name: document.getElementById('mealName').value,
+                supplier: document.getElementById('mealSupplier').value,
+                price: parseInt(document.getElementById('mealPrice').value),
+                status: document.getElementById('mealStatus').value,
+                category: document.getElementById('mealCategory').value,
+                image_url: document.getElementById('mealImage').value
+            };
+            if(!payload.name || !payload.price || !payload.category) return alert('Fill required fields ❌');
+
+            await fetch('http://localhost:5000/api/admin/menu', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+            });
+            fetchMeals();
+            // Clear form
+            document.getElementById('mealName').value='';
+            document.getElementById('mealSupplier').value='';
+            document.getElementById('mealPrice').value='';
+            document.getElementById('mealStatus').value='Available';
+            document.getElementById('mealCategory').value='';
+            document.getElementById('mealImage').value='';
+        }
+
+        // DELETE meal
+        async function deleteMeal(id) {
+            if(!confirm('Are you sure you want to delete this meal?')) return;
+            await fetch(`http://localhost:5000/api/admin/menu/${id}`, {method:'DELETE'});
+            fetchMeals();
+        }
+
+        // EDIT meal
+        function editMeal(id) {
+            const meal = meals.find(m=>m.id===id);
+            if(!meal) return;
+            const newName = prompt('Meal Name:', meal.name);
+            if(newName===null) return;
+            const newPrice = prompt('Price:', meal.price);
+            if(newPrice===null) return;
+            const newStatus = prompt('Status (Available/Unavailable):', meal.status);
+            if(newStatus===null) return;
+            const newCategory = prompt('Category:', meal.category);
+            if(newCategory===null) return;
+
+            fetch(`http://localhost:5000/api/admin/menu/${id}`, {
+                method:'PUT',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    name:newName, price:parseInt(newPrice), status:newStatus, category:newCategory
+                })
+            }).then(()=>fetchMeals());
+        }
+
+        // Initial fetch
+        fetchMeals();
+    </script>
+</body>
+</html>

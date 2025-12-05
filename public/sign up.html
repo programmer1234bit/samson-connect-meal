@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Samson Connect Meals | Auth</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, orange, gold);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px 0;
+    }
+
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      width: 380px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .card h2 {
+      color: #ff6600;
+      margin-bottom: 20px;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      text-shadow: 1px 1px 2px #ffa500;
+      letter-spacing: 1px;
+    }
+
+    input, select, button {
+      width: 90%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #ff6600;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #e65c00;
+    }
+
+    a {
+      display: block;
+      margin-top: 10px;
+      color: #333;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .social-login {
+      margin: 15px 0;
+    }
+
+    .social-login p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .social-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .social-buttons button {
+      padding: 10px;
+      font-size: 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      color: white;
+      flex: 1;
+    }
+
+    .google { background: #DB4437; }
+    .facebook { background: #3b5998; }
+    .whatsapp { background: #25D366; }
+    .social-buttons button:hover { opacity: 0.85; }
+
+    label {
+      display: block;
+      margin: 10px 0 5px 0;
+      font-weight: bold;
+      color: #333;
+      text-align: left;
+    }
+
+    .info-box {
+      background: #e8f4f8;
+      border-left: 4px solid #ff6600;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #333;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card" id="loginForm">
+    <h2>Welcome Back 👋</h2>
+    <form id="loginFormElement">
+      <input type="text" placeholder="Username" name="username" required>
+      <input type="password" placeholder="Password" name="password" required>
+      <button type="submit">Login</button>
+    </form>
+
+    <div class="social-login">
+      <p>Or login with</p>
+      <div class="social-buttons">
+        <button class="google">Google</button>
+        <button class="facebook">Facebook</button>
+        <button class="whatsapp">WhatsApp</button>
+      </div>
+    </div>
+
+    <a href="#" onclick="showSignup()">Don't have an account? Sign up</a>
+    <a href="#" onclick="showReset()">Forgot Password?</a>
+  </div>
+
+  <div class="card hidden" id="signupForm">
+    <h2>Create Account ✨</h2>
+    <form id="signupFormElement">
+      <input type="text" placeholder="First Name" name="firstName" required>
+      <input type="text" placeholder="Last Name" name="lastName" required>
+      <input type="email" placeholder="Email" name="email" required>
+      <input type="text" placeholder="Phone Number" id="phone" name="phone" required>
+      <input type="text" placeholder="Username" name="username" required>
+      <input type="password" placeholder="Password" name="password" required>
+      <input type="password" placeholder="Confirm Password" name="confirmPassword" required>
+
+      <label for="role">I am a:</label>
+      <select id="role" name="role" required>
+        <option value="customer">Customer</option>
+        <option value="meal_supplier">Meal Supplier</option>
+      </select>
+
+      <!-- ⭐️ INFO BOX: Let suppliers know they'll complete details after signup -->
+      <div class="info-box">
+        <strong>💡 Tip for Suppliers:</strong> Complete your restaurant details (name, address, bank account) in your profile after signing up. You'll be redirected to complete your setup!
+      </div>
+
+      <button type="submit">Sign Up</button>
+    </form>
+
+    <div class="social-login">
+      <p>Or sign up with</p>
+      <div class="social-buttons">
+        <button class="google">Google</button>
+        <button class="facebook">Facebook</button>
+        <button class="whatsapp">WhatsApp</button>
+      </div>
+    </div>
+
+    <a href="#" onclick="showLogin()">Already have an account? Login</a>
+  </div>
+
+  <div class="card hidden" id="resetForm">
+    <h2>Reset Password 🔒</h2>
+    <form id="resetFormElement">
+      <input type="email" placeholder="Enter your email" required>
+      <input type="password" placeholder="New Password" required>
+      <button type="submit">Reset Password</button>
+    </form>
+    <a href="#" onclick="showLogin()">Back to Login</a>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById("loginForm");
+    const signupForm = document.getElementById("signupForm");
+    const resetForm = document.getElementById("resetForm");
+
+    function showLogin() {
+      loginForm.classList.remove("hidden");
+      signupForm.classList.add("hidden");
+      resetForm.classList.add("hidden");
+    }
+
+    function showSignup() {
+      loginForm.classList.add("hidden");
+      signupForm.classList.remove("hidden");
+      resetForm.classList.add("hidden");
+    }
+
+    function showReset() {
+      loginForm.classList.add("hidden");
+      signupForm.classList.add("hidden");
+      resetForm.classList.remove("hidden");
+    }
+   
+    // ------------------- LOGIN LOGIC (UPDATED FOR ROLE REDIRECT AND LOCAL STORAGE) -------------------    
+    const loginFormElement = document.getElementById("loginFormElement");
+    loginFormElement.addEventListener("submit", async e => {
+      e.preventDefault();
+      const username = loginFormElement.querySelector('input[name="username"]').value; 
+      const password = loginFormElement.querySelector('input[name="password"]').value;
+
+      try {
+        const res = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+        
+        if (res.ok) {
+          alert('Login successful! 🎉 Redirecting...');
+          
+          // ⭐️ CRITICAL FIX: Save the user's ID to localStorage
+          if (data.userId) {
+              localStorage.setItem('userId', data.userId);
+              localStorage.setItem('supplierId', data.userId);
+          } else if (data.id) { 
+              localStorage.setItem('userId', data.id);
+              localStorage.setItem('supplierId', data.id);
+          }
+          
+          if (data.redirectUrl) {
+            window.location.href = data.redirectUrl; 
+          } else {
+            window.location.href = 'menu.html'; 
+          }
+        } else {
+          alert(data.message || 'Login failed. Invalid username or password.');
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        alert('Error logging in ❌. Check server connection.');
+      }
+    });
+
+    // ------------------- SIGNUP LOGIC (SIMPLIFIED - NO SUPPLIER FIELDS) -------------------    
+    const signupFormElement = document.getElementById("signupFormElement");
+    signupFormElement.addEventListener("submit", async e => {
+      e.preventDefault();
+
+      const firstName = document.querySelector('#signupFormElement input[name="firstName"]').value;
+      const lastName = document.querySelector('#signupFormElement input[name="lastName"]').value;
+      const email = document.querySelector('#signupFormElement input[name="email"]').value;
+      const phone = document.getElementById('phone').value;
+      const username = document.querySelector('#signupFormElement input[name="username"]').value;
+      const password = document.querySelector('#signupFormElement input[name="password"]').value;
+      const confirmPassword = document.querySelector('#signupFormElement input[name="confirmPassword"]').value;
+      const role = document.getElementById('role').value;
+
+      if (password !== confirmPassword) {
+        return alert("Passwords do not match");
+      }
+
+      // ⭐️ SIMPLIFIED: Send only basic user info (no restaurant details)
+      const postData = {
+        firstName, 
+        lastName, 
+        email, 
+        phone, 
+        username, 
+        password, 
+        role
+      };
+      
+      try {
+        const res = await fetch('http://localhost:5000/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(postData)
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok) {
+          alert(data.message || 'Signup failed.');
+          return;
+        }
+
+        alert(data.message);
+
+        // ⭐️ CRITICAL FIX: Save userId to localStorage BEFORE redirecting
+        if (data.userId) {
+          localStorage.setItem('userId', data.userId);
+          localStorage.setItem('supplierId', data.userId);
+          console.log('✅ User ID saved to localStorage:', data.userId);
+        } else {
+          console.warn('⚠️ No userId returned from server');
+        }
+
+        // Redirect to profile page (suppliers) or menu (customers)
+        if (data.redirectUrl) { 
+          window.location.href = data.redirectUrl;
+        }
+        
+      } catch (err) {
+        console.error('Signup error:', err);
+        alert('Error signing up ❌');
+      }
+    });
+
+    // ------------------- RESET PASSWORD LOGIC -------------------    
+    const resetFormElement = document.getElementById("resetFormElement");
+    resetFormElement.addEventListener("submit", async e => {
+      e.preventDefault();
+      const email = resetFormElement.querySelector('input[type="email"]').value;
+      const newPassword = resetFormElement.querySelector('input[type="password"]').value;
+
+      try {
+        const res = await fetch('http://localhost:5000/api/auth/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, newPassword })
+        });
+
+        const data = await res.json();
+        alert(data.message);
+        if(res.ok && data.message.includes("successful")) {
+          showLogin();
+        }
+      } catch (err) {
+        console.error('Reset password error:', err);
+        alert('Error resetting password ❌');
+      }
+    });
+  </script>
+</body>
+</html>

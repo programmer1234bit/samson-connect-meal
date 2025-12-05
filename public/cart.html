@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Samson Connect Meals | Cart</title>
+<style>
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #fff8f0;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ff6600;
+    padding: 15px 20px;
+    position: sticky;
+    top: 0;
+    border-bottom: 3px solid gold;
+    z-index: 100;
+  }
+  header a { color: white; text-decoration: none; font-weight: bold; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 22px; }
+  .logo img { width: 50px; height: 50px; border-radius: 50%; background: white; padding: 5px; }
+  nav a { text-decoration: none; padding: 10px 18px; border-radius: 8px; background: black; color: white; font-weight: bold; margin-left:10px; transition: 0.3s; }
+  nav a:hover { background: gold; color: black; transform: scale(1.05); }
+
+  .cart-container {
+    flex: 1;
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+
+  h2 {
+    text-align: center;
+    color: #ff6600;
+    font-size: 2em;
+    margin-bottom: 30px;
+    text-shadow: 1px 1px 2px #ffa500;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  th, td {
+    padding: 12px 15px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+  }
+
+  th { background: #ff6600; color: white; }
+  tr:hover { background: #fff0e0; }
+
+  .quantity-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+  }
+  .quantity-btn {
+    background: #ff6600;
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+  }
+  .quantity-btn:hover { background: gold; color: black; transform: scale(1.1); }
+
+  .remove-btn {
+    background: #ff3333;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .remove-btn:hover { background: gold; color: black; }
+
+  .total-section {
+    text-align: right;
+    margin-top: 20px;
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #ff6600;
+  }
+
+  .checkout-btn {
+    background: #ff6600;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 20px;
+    transition: 0.3s;
+    display: block;
+    margin-left: auto;
+  }
+  .checkout-btn:hover { background: gold; color: black; transform: scale(1.05); }
+
+  footer {
+    background: #ff6600;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    border-top: 3px solid gold;
+    font-size: 14px;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
+  }
+
+  @media(max-width:768px) {
+    th, td { font-size: 14px; padding: 8px; }
+    .checkout-btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="menu.html" class="logo">
+    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/482fa995-d521-43f4-8e5d-5f35a035c657.png" alt="Logo">
+    Samson Connect Meals
+  </a>
+  <nav>
+    <a href="menu.html">Menu</a>
+    <a href="services.html">Services</a>
+    <a href="about.html">About Us</a>
+    <a href="contact.html">Contact</a>
+    <a href="cart.html">Cart 🛒<span class="cart-count" id="cart-count">0</span></a>
+    <a href="user.html">Manage Account</a>
+  </nav>
+</header>
+
+<div class="cart-container">
+  <h2>Your Cart 🛒</h2>
+  <table id="cart-table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Meal</th>
+        <th>Price (Tsh)</th>
+        <th>Quantity</th>
+        <th>Subtotal</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="cart-body">
+      <!-- Items injected here -->
+    </tbody>
+  </table>
+  <div class="total-section" id="total-section">Total: Tsh 0</div>
+  <button class="checkout-btn" onclick="checkout()">Proceed to Checkout</button>
+</div>
+
+<footer>
+  &copy; 2025 Samson Connect Meals. All rights reserved. Contact: samsonprogrammer@gmail.com
+</footer>
+
+<script>
+const username = localStorage.getItem('username') || 'Guest';
+
+async function renderCart() {
+    try {
+        const res = await fetch(`/api/cart/${username}`);
+        const cart = await res.json();
+
+        const tbody = document.getElementById('cart-body');
+        tbody.innerHTML = '';
+        let total = 0;
+
+        if(cart.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">Your cart is empty!</td></tr>';
+        }
+
+        cart.forEach(item => {
+            const subtotal = item.price * item.quantity;
+            total += subtotal;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.username}</td>
+                <td>${item.name}</td>
+                <td>${item.price.toLocaleString()}</td>
+                <td>
+                  <div class="quantity-controls">
+                    <button onclick="updateQuantity(${item.meal_id}, -1)">-</button>
+                    <span>${item.quantity}</span>
+                    <button onclick="updateQuantity(${item.meal_id}, 1)">+</button>
+                  </div>
+                </td>
+                <td>${subtotal.toLocaleString()}</td>
+                <td><button class="remove-btn" onclick="removeItem(${item.meal_id})">Remove</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('total-section').textContent = `Total: Tsh ${total.toLocaleString()}`;
+        document.getElementById('cart-count').textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function updateQuantity(mealId, delta){
+    try {
+        const res = await fetch(`/api/cart/${username}`);
+        const cart = await res.json();
+        const item = cart.find(i => i.meal_id === mealId);
+        if(!item) return;
+
+        const newQuantity = Math.max(0, item.quantity + delta);
+        await fetch('/api/cart', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, meal_id: mealId, quantity: newQuantity })
+        });
+        renderCart();
+    } catch (err) { console.error(err); }
+}
+
+async function removeItem(mealId){
+    try {
+        await fetch(`/api/cart/item/${username}/${mealId}`, {
+            method: 'DELETE'
+        });
+        renderCart(); // refresh cart
+    } catch (err) {
+        console.error(err);
+        alert('Failed to remove item');
+    }
+}
+
+
+async function checkout(){
+    try {
+        const res = await fetch(`/api/cart/${username}`);
+        const cart = await res.json();
+        if(cart.length === 0) { 
+            alert("Your cart is empty!"); 
+            return; 
+        }
+
+        // Call backend checkout (moves cart -> orders table)
+        await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+
+        alert("Checkout successful! 🎉 Thank you for your order.");
+        window.location.href = "checkout.html"; // redirect
+
+    } catch (err) { console.error(err); }
+}
+
+document.addEventListener('DOMContentLoaded', renderCart);
+</script>
+
+</body>
+</html>

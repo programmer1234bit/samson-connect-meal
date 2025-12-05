@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Samson Connect Meals | Order Status</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #fff8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+    }
+    header {
+      background: #ff6600;
+      padding: 15px 20px;
+      border-bottom: 3px solid gold;
+      color: white;
+      font-weight: bold;
+      font-size: 1.5rem;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      user-select: none;
+    }
+    #map {
+      height: 450px;
+      border-radius: 1rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      margin-top: 1.5rem;
+      width: 100%;
+      max-width: 900px;
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      font-weight: 600;
+    }
+    .info-box {
+      max-width: 900px;
+      margin: 3rem auto 1rem;
+      background: white;
+      padding: 2rem 2.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .info-box h1 {
+      color: #ff6600;
+      font-weight: 900;
+      font-size: 2.25rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 1px 1px 3px #ffa500;
+    }
+    .info-box p {
+      font-size: 1.125rem;
+      margin: 0.5rem 0;
+      color: #444;
+    }
+    .info-box span {
+      font-weight: 700;
+      color: #ff6600;
+    }
+    .delivery-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .info-card {
+      background: #f8fafc;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      border-left: 4px solid #ff6600;
+    }
+    .loading-spinner {
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid #ff6600;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @media (max-width: 640px) {
+      #map {
+        height: 300px;
+      }
+      .info-box {
+        margin: 2rem 1rem 1rem;
+        padding: 1.5rem 1.5rem;
+      }
+      .info-box h1 {
+        font-size: 1.75rem;
+      }
+      .info-box p {
+        font-size: 1rem;
+      }
+      .delivery-info {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Modal styles */
+    #thankYouModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      visibility: visible;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+    #thankYouModal.hidden {
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #thankYouModal .modal-content {
+      background: white;
+      padding: 2rem 3rem;
+      border-radius: 1rem;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #thankYouModal .modal-content h2 {
+      color: #ff6600;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      font-weight: 900;
+      text-shadow: 1px 1px 3px #ffa500;
+    }
+    #thankYouModal .modal-content p {
+      font-size: 1.125rem;
+      margin-bottom: 2rem;
+      color: #444;
+    }
+    #thankYouModal .modal-content button {
+      background: #ff6600;
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 0.75rem;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #thankYouModal .modal-content button:hover {
+      background: gold;
+      color: black;
+    }
+  </style>
+</head>
+<body>
+
+  <header>Samson Connect Meals | Order Status</header>
+
+  <!-- Modal -->
+  <div id="thankYouModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDesc">
+    <div class="modal-content">
+      <h2 id="modalTitle">Thank You for Your Order!</h2>
+      <p id="modalDesc">We appreciate your trust in Samson Connect Meals. Your delivery is being prepared and will be on the way shortly.</p>
+      <button id="modalOkBtn" aria-label="Close thank you message and view order status">OK</button>
+    </div>
+  </div>
+
+  <main role="main" class="flex-grow" aria-hidden="true" id="mainContent" tabindex="-1">
+    <section class="info-box" aria-label="Delivery status information">
+      <h1>Your Delivery is on the way! 🚚</h1>
+      
+      <!-- Order Status Progress -->
+      <div class="order-status" style="margin: 1.5rem 0; padding: 1rem; background: #f8fafc; border-radius: 0.5rem; border-left: 4px solid #ff6600;">
+        <h3 style="color: #ff6600; font-weight: bold; margin-bottom: 0.5rem;">📦 Order Status</h3>
+        <p id="order-status-text" style="font-size: 1rem; margin: 0; color: #444;">Loading order status...</p>
+        <div class="progress-bar" style="margin-top: 0.5rem; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+          <div id="progress-fill" style="height: 100%; background: linear-gradient(90deg, #ff6600, #facc15); width: 0%; transition: width 0.5s ease;"></div>
+        </div>
+      </div>
+
+      <div class="delivery-info">
+        <div class="info-card">
+          <h3 style="color: #ff6600; font-weight: bold; margin-bottom: 0.5rem;">📍 Distance</h3>
+          <p style="font-size: 1.5rem; margin: 0;"><span id="distance">-- km</span></p>
+        </div>
+        
+        <div class="info-card">
+          <h3 style="color: #ff6600; font-weight: bold; margin-bottom: 0.5rem;">⏰ Estimated Time</h3>
+          <p style="font-size: 1.5rem; margin: 0;"><span id="eta">-- mins</span></p>
+        </div>
+        
+        <div class="info-card">
+          <h3 style="color: #ff6600; font-weight: bold; margin-bottom: 0.5rem;">🏪 From</h3>
+          <p style="font-size: 1rem; margin: 0;">Restaurant Kitchen</p>
+        </div>
+        
+        <div class="info-card">
+          <h3 style="color: #ff6600; font-weight: bold; margin-bottom: 0.5rem;">🎯 To</h3>
+          <p style="font-size: 1rem; margin: 0;">Your Location</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="flex justify-center px-4">
+      <div id="map" role="region" aria-label="Map showing delivery route">
+        <div>
+          <div class="loading-spinner"></div>
+          <p>Loading delivery route...</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-orange-500 text-white text-center py-4 mt-12 shadow-inner">
+    &copy; 2025 Samson Connect Meals. All rights reserved.
+  </footer>
+
+  <script>
+const modal = document.getElementById('thankYouModal');
+const mainContent = document.getElementById('mainContent');
+const okBtn = document.getElementById('modalOkBtn');
+
+// Global variables for tracking
+let map, directionsService, directionsRenderer, trafficLayer;
+let userCoords, supplierCoords;
+let driverMarker, routePath = [];
+let distance, eta;
+let orderData = null;
+let trackingInterval = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  mainContent.setAttribute('aria-hidden', 'true');
+  mainContent.style.display = 'none';
+  modal.classList.remove('hidden');
+  okBtn.focus();
+});
+
+okBtn.addEventListener('click', () => {
+  modal.classList.add('hidden');
+  mainContent.style.display = 'block';
+  mainContent.setAttribute('aria-hidden', 'false');
+  mainContent.focus();
+  initializeOrderTracking();
+});
+
+// Directions panel
+const directionsPanel = document.createElement('div');
+directionsPanel.id = 'directionsPanel';
+directionsPanel.style.position = 'absolute';
+directionsPanel.style.top = '80px';
+directionsPanel.style.right = '20px';
+directionsPanel.style.width = '300px';
+directionsPanel.style.maxHeight = '400px';
+directionsPanel.style.overflowY = 'auto';
+directionsPanel.style.backgroundColor = 'white';
+directionsPanel.style.padding = '1rem';
+directionsPanel.style.borderRadius = '0.5rem';
+directionsPanel.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
+directionsPanel.style.fontSize = '0.9rem';
+directionsPanel.style.zIndex = '1000';
+document.body.appendChild(directionsPanel);
+
+// Legacy fallback method
+function initializeMapAndDataLegacy() {
+  console.log('Using legacy map initialization');
+  const orderInfo = JSON.parse(localStorage.getItem('orderInfo') || '{}');
+  userCoords = orderInfo.userCoords || JSON.parse(localStorage.getItem('userCoords') || '{"lat": -6.7924, "lng": 39.2083}');
+  supplierCoords = orderInfo.supplierCoords || JSON.parse(localStorage.getItem('supplierCoords') || '{"lat": -6.799, "lng": 39.2}');
+  distance = localStorage.getItem('distance') || orderInfo.distance || '--';
+  eta = localStorage.getItem('eta') || orderInfo.eta || '--';
+
+  // Update UI from stored values immediately
+  document.getElementById('distance').textContent = (typeof distance === 'number' ? distance.toFixed(1) : distance) + ' km';
+  document.getElementById('eta').textContent = (typeof eta === 'number' ? eta : eta) + ' mins';
+
+  // Load Google Maps for legacy method
+  loadGoogleMapsAPI().then(() => {
+    initMap();
+  }).catch((error) => {
+    console.error('Legacy map loading failed:', error);
+    showMapError('Google Maps failed to load. Check your internet connection.');
+  });
+}
+
+
+// Update order information display
+function updateOrderInfo(data) {
+  // Update distance and ETA
+  document.getElementById('distance').textContent = 'Calculating...';
+  document.getElementById('eta').textContent = data.estimatedDeliveryTime + ' mins';
+  
+  // Update supplier info
+  const supplierCard = document.querySelector('.info-card:nth-child(3) p');
+  if (supplierCard) {
+    supplierCard.textContent = data.supplierName || 'Restaurant Kitchen';
+  }
+  
+  // Update delivery address
+  const deliveryCard = document.querySelector('.info-card:nth-child(4) p');
+  if (deliveryCard) {
+    deliveryCard.textContent = data.deliveryAddress || 'Your Location';
+  }
+  
+  // Update initial status
+  updateStatusIndicator(data.status);
+  
+  // Set coordinates
+  if (data.userCoords) {
+    try {
+      userCoords = typeof data.userCoords === 'string' ? JSON.parse(data.userCoords) : data.userCoords;
+    } catch (e) {
+      userCoords = { lat: -6.7924, lng: 39.2083 };
+    }
+  }
+  
+  if (data.deliveryLat && data.deliveryLng) {
+    userCoords = { lat: data.deliveryLat, lng: data.deliveryLng };
+  }
+  
+  supplierCoords = data.supplierCoords || { lat: -6.799, lng: 39.2 };
+}
+
+// Show loading state
+function showLoadingState() {
+  document.getElementById('distance').textContent = 'Loading...';
+  document.getElementById('eta').textContent = 'Loading...';
+}
+
+function showMapError(message) {
+  console.error('Map error:', message);
+  document.getElementById('map').innerHTML = `
+    <div style="text-align:center; padding: 2rem;">
+      <p style="color:#ef4444;font-weight:600; font-size: 1.2rem;">⚠️ Map Unavailable</p>
+      <p style="color:#6b7280;font-size:0.9rem; margin: 1rem 0;">${message}</p>
+      <button onclick="location.reload()" style="margin-top:1rem;background:#ff6600;color:white;padding:0.75rem 1.5rem;border:none;border-radius:0.5rem;font-weight:600;cursor:pointer;">Retry</button>
+      <br><br>
+      <button onclick="initFallbackMap()" style="background:#16a34a;color:white;padding:0.75rem 1.5rem;border:none;border-radius:0.5rem;font-weight:600;cursor:pointer;">Show Basic Map</button>
+    </div>
+  `;
+}
+
+// Fallback map initialization with default coordinates
+function initFallbackMap() {
+  try {
+    console.log('Initializing fallback map...');
+    
+    // Use default coordinates for Dar es Salaam
+    const defaultCoords = { lat: -6.7924, lng: 39.2083 };
+    userCoords = userCoords || defaultCoords;
+    supplierCoords = supplierCoords || { lat: -6.799, lng: 39.2 };
+    
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: defaultCoords,
+      zoom: 12,
+      mapTypeId: 'roadmap'
+    });
+
+    // Add simple markers
+    new google.maps.Marker({
+      position: supplierCoords,
+      map,
+      title: 'Restaurant',
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: '#ff6600', fillOpacity: 0.9, strokeColor: '#fff', strokeWeight: 3 }
+    });
+
+    new google.maps.Marker({
+      position: userCoords,
+      map,
+      title: 'Your Location',
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: '#16a34a', fillOpacity: 0.9, strokeColor: '#fff', strokeWeight: 3 }
+    });
+
+    console.log('Fallback map initialized successfully');
+  } catch (error) {
+    console.error('Error initializing fallback map:', error);
+    document.getElementById('map').innerHTML = `
+      <div style="text-align:center; padding: 2rem;">
+        <p style="color:#ef4444;font-weight:600;">❌ Map Failed to Load</p>
+        <p style="color:#6b7280;">Please check your internet connection and try again.</p>
+      </div>
+    `;
+  }
+}
+
+// New optimized map initialization with real data
+function initMapWithRealData() {
+  try {
+    console.log('Initializing map with real data...');
+    console.log('User coords:', userCoords);
+    console.log('Supplier coords:', supplierCoords);
+    
+    if (!userCoords || !supplierCoords) {
+      throw new Error('Missing coordinates for map initialization');
+    }
+    
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: supplierCoords,
+      zoom: 14,
+      mapTypeId: 'roadmap',
+      streetViewControl: true,
+      fullscreenControl: true,
+      zoomControl: true,
+      rotateControl: true,
+      mapTypeControl: true
+    });
+
+    trafficLayer = new google.maps.TrafficLayer();
+    trafficLayer.setMap(map);
+
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      map,
+      panel: directionsPanel,
+      polylineOptions: { strokeColor: '#ff6600', strokeWeight: 6 },
+      suppressMarkers: true
+    });
+
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(userCoords);
+    bounds.extend(supplierCoords);
+    map.fitBounds(bounds);
+
+    createMarkers();
+    calculateRouteAndAnimateDriver();
+    
+    console.log('Map initialized successfully');
+  } catch (error) {
+    console.error('Error initializing map with real data:', error);
+    showMapError('Failed to initialize map: ' + error.message);
+  }
+}
+
+// Legacy map initialization
+function initMap() {
+  try {
+    console.log('Initializing legacy map...');
+    console.log('User coords:', userCoords);
+    console.log('Supplier coords:', supplierCoords);
+    
+    if (!userCoords || !supplierCoords) {
+      throw new Error('Missing coordinates for legacy map initialization');
+    }
+    
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: supplierCoords,
+      zoom: 14,
+      mapTypeId: 'roadmap',
+      streetViewControl: true,
+      fullscreenControl: true,
+      zoomControl: true,
+      rotateControl: true,
+      mapTypeControl: true
+    });
+
+    trafficLayer = new google.maps.TrafficLayer();
+    trafficLayer.setMap(map);
+
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      map,
+      panel: directionsPanel,
+      polylineOptions: { strokeColor: '#ff6600', strokeWeight: 6 },
+      suppressMarkers: true
+    });
+
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(userCoords);
+    bounds.extend(supplierCoords);
+    map.fitBounds(bounds);
+
+    createMarkers();
+    calculateRouteAndAnimateDriver();
+    
+    console.log('Legacy map initialized successfully');
+  } catch (error) {
+    console.error('Error initializing legacy map:', error);
+    showMapError('Failed to initialize legacy map: ' + error.message);
+  }
+}
+
+function createMarkers() {
+  const supplierMarker = new google.maps.Marker({
+    position: supplierCoords,
+    map,
+    title: '🏪 Restaurant',
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: '#ff6600', fillOpacity: 0.9, strokeColor: '#fff', strokeWeight: 3 }
+  });
+  const supplierInfo = new google.maps.InfoWindow({ content: '<strong>🏪 Restaurant</strong><br>Order being prepared' });
+  supplierMarker.addListener('click', () => supplierInfo.open(map, supplierMarker));
+
+  const userMarker = new google.maps.Marker({
+    position: userCoords,
+    map,
+    title: '📍 Your Location',
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: '#16a34a', fillOpacity: 0.9, strokeColor: '#fff', strokeWeight: 3 }
+  });
+  const userInfo = new google.maps.InfoWindow({ content: '<strong>📍 Your Location</strong><br>Delivery destination' });
+  userMarker.addListener('click', () => userInfo.open(map, userMarker));
+}
+
+function calculateRouteAndAnimateDriver() {
+  // Request driving directions from supplier -> user with traffic data
+  const request = {
+    origin: supplierCoords,
+    destination: userCoords,
+    travelMode: google.maps.TravelMode.DRIVING,
+    drivingOptions: { 
+      departureTime: new Date(),
+      trafficModel: google.maps.TrafficModel.PESSIMISTIC // Use pessimistic traffic model for more accurate ETAs
+    },
+    avoidHighways: false,
+    avoidTolls: false
+  };
+
+  directionsService.route(request, (result, status) => {
+    if (status === 'OK' && result.routes && result.routes.length) {
+      directionsRenderer.setDirections(result);
+      const leg = result.routes[0].legs[0];
+      if (leg) {
+        // Set readable distance and ETA with traffic consideration
+        const legDistanceKm = leg.distance && leg.distance.value ? (leg.distance.value / 1000) : null;
+        
+        // Use duration_in_traffic if available, otherwise fall back to duration
+        const durationValue = leg.duration_in_traffic ? leg.duration_in_traffic.value : leg.duration.value;
+        const legDurationMin = durationValue ? Math.ceil(durationValue / 60) : null;
+
+        if (legDistanceKm !== null) {
+          document.getElementById('distance').textContent = legDistanceKm.toFixed(1) + ' km';
+          localStorage.setItem('distance', legDistanceKm.toFixed(1));
+        }
+        if (legDurationMin !== null) {
+          document.getElementById('eta').textContent = legDurationMin + ' mins';
+          localStorage.setItem('eta', legDurationMin.toString());
+          
+          // Update order data if available
+          if (orderData) {
+            orderData.estimatedDeliveryTime = legDurationMin;
+          }
+        }
+
+        // store route path for driver animation
+        routePath = result.routes[0].overview_path || [];
+        createDriverMarker();
+        
+        // Log traffic info for debugging
+        if (leg.duration_in_traffic) {
+          const trafficDelay = leg.duration_in_traffic.value - leg.duration.value;
+          console.log(`Traffic delay: ${Math.ceil(trafficDelay / 60)} minutes`);
+        }
+      }
+    } else {
+      console.warn('Directions request failed:', status);
+      // Fallback: compute straight-line distance and an ETA estimate
+      const fallbackKm = computeHaversineDistance(supplierCoords, userCoords);
+      const fallbackEta = Math.max(5, Math.round((fallbackKm / 25) * 60)); // assume avg 25 km/h in traffic
+      document.getElementById('distance').textContent = fallbackKm.toFixed(1) + ' km';
+      document.getElementById('eta').textContent = fallbackEta + ' mins';
+      // still attempt to animate a simple straight line path
+      routePath = buildStraightLinePath(supplierCoords, userCoords, 60);
+      createDriverMarker();
+    }
+  });
+}
+
+// compute straight-line distance (km)
+function computeHaversineDistance(a, b) {
+  const R = 6371; // km
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lng - a.lng) * Math.PI / 180;
+  const lat1 = a.lat * Math.PI / 180;
+  const lat2 = b.lat * Math.PI / 180;
+  const sinDLat = Math.sin(dLat/2);
+  const sinDLon = Math.sin(dLon/2);
+  const aVal = sinDLat*sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon*sinDLon;
+  const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1-aVal));
+  return R * c;
+}
+
+// build a simple interpolated path between two points (N steps)
+function buildStraightLinePath(a, b, steps = 60) {
+  const path = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    path.push({
+      lat: a.lat + (b.lat - a.lat) * t,
+      lng: a.lng + (b.lng - a.lng) * t
+    });
+  }
+  return path;
+}
+
+function createDriverMarker() {
+  if (!routePath.length) return;
+  driverMarker = new google.maps.Marker({
+    position: routePath[0],
+    map,
+    title: '🚚 Delivery Driver',
+    icon: { url: 'https://img.icons8.com/emoji/48/truck-emoji.png', scaledSize: new google.maps.Size(40, 40) }
+  });
+  animateDriverSmooth();
+}
+
+function animateDriverSmooth() {
+  let index = 0;
+  const step = () => {
+    if (index < routePath.length) {
+      driverMarker.setPosition(routePath[index]);
+      index++;
+      if (index % 5 === 0) updateETA(index);
+      requestAnimationFrame(step);
+    }
+  };
+  step();
+}
+
+function updateETA(index) {
+  if (!routePath.length) return;
+  const remaining = routePath.length - index;
+  const legDistance = google.maps.geometry.spherical.computeDistanceBetween(routePath[index], routePath[routePath.length-1]) / 1000; // km
+  const avgSpeed = 40; // km/h simulate average
+  const estimatedMins = Math.ceil((legDistance / avgSpeed) * 60);
+  document.getElementById('eta').textContent = estimatedMins + ' mins';
+}
+
+// Real-time tracking system
+function startRealTimeTracking(orderId) {
+  // Clear any existing interval
+  if (trackingInterval) {
+    clearInterval(trackingInterval);
+  }
+  
+  // Update every 30 seconds
+  trackingInterval = setInterval(async () => {
+    try {
+      const response = await fetch(`/api/checkout/track/${orderId}`);
+      if (response.ok) {
+        const updatedData = await response.json();
+        updateOrderStatus(updatedData);
+        
+        // Stop tracking if order is delivered
+        if (updatedData.status === 'delivered') {
+          clearInterval(trackingInterval);
+          showDeliveryComplete();
+        }
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
+  }, 30000);
+}
+
+// Update order status display
+function updateOrderStatus(data) {
+  // Update ETA based on current status
+  document.getElementById('eta').textContent = data.estimatedDeliveryTime + ' mins';
+  
+  // Update status indicator
+  updateStatusIndicator(data.status);
+  
+  // Update driver position if on the way
+  if (data.status === 'on_the_way' && driverMarker) {
+    updateDriverPosition(data);
+  }
+}
+
+// Status indicator updates
+function updateStatusIndicator(status) {
+  const statusMessages = {
+    'preparing': '👨‍🍳 Preparing your meal',
+    'ready': '🚗 Driver assigned - Food ready',
+    'on_the_way': '🚚 On the way to you',
+    'delivered': '✅ Delivered successfully'
+  };
+  
+  const statusText = statusMessages[status] || 'Unknown status';
+  const statusElement = document.getElementById('order-status-text');
+  const progressElement = document.getElementById('progress-fill');
+  
+  if (statusElement) {
+    statusElement.textContent = statusText;
+  }
+  
+  // Update progress bar based on status
+  if (progressElement) {
+    const progressMap = {
+      'preparing': 25,
+      'ready': 50,
+      'on_the_way': 75,
+      'delivered': 100
+    };
+    progressElement.style.width = (progressMap[status] || 0) + '%';
+  }
+  
+  console.log('Order status:', statusText);
+}
+
+// Update driver position (simulated with traffic awareness)
+function updateDriverPosition(data) {
+  if (!driverMarker || !routePath.length) return;
+  
+  // Simulate driver moving along route with realistic progress
+  let progress = 0;
+  
+  // Calculate progress based on order status and time elapsed
+  if (data.status === 'preparing') {
+    progress = Math.min(data.minutesSinceOrder / 20, 0.3); // 30% max during preparation
+  } else if (data.status === 'ready') {
+    progress = 0.3 + Math.min((data.minutesSinceOrder - 20) / 10, 0.2); // 30-50% when ready
+  } else if (data.status === 'on_the_way') {
+    progress = 0.5 + Math.min((data.minutesSinceOrder - 30) / 20, 0.4); // 50-90% when on the way
+  }
+  
+  const currentIndex = Math.floor(progress * routePath.length);
+  
+  if (currentIndex < routePath.length) {
+    driverMarker.setPosition(routePath[currentIndex]);
+    
+    // Update ETA based on remaining distance with traffic consideration
+    const remainingDistance = google.maps.geometry.spherical.computeDistanceBetween(
+      routePath[currentIndex], 
+      userCoords
+    ) / 1000; // km
+    
+    // Adjust speed based on time of day and traffic patterns
+    let averageSpeed = 30; // km/h default
+    const currentHour = new Date().getHours();
+    
+    // Rush hour adjustments (7-9 AM, 5-7 PM)
+    if ((currentHour >= 7 && currentHour <= 9) || (currentHour >= 17 && currentHour <= 19)) {
+      averageSpeed = 20; // Slower during rush hour
+    } else if (currentHour >= 22 || currentHour <= 6) {
+      averageSpeed = 40; // Faster during night hours
+    }
+    
+    const remainingTime = Math.ceil((remainingDistance / averageSpeed) * 60);
+    document.getElementById('eta').textContent = Math.max(1, remainingTime) + ' mins';
+    
+    // Update driver marker icon based on progress
+    if (progress > 0.8) {
+      driverMarker.setIcon({
+        url: 'https://img.icons8.com/emoji/48/delivery-truck-emoji.png',
+        scaledSize: new google.maps.Size(40, 40)
+      });
+    }
+  }
+}
+
+// Show delivery complete
+function showDeliveryComplete() {
+  const etaElement = document.getElementById('eta');
+  etaElement.textContent = 'Delivered!';
+  etaElement.style.color = '#16a34a';
+  etaElement.style.fontWeight = 'bold';
+  
+  // Show success message
+  setTimeout(() => {
+    alert('🎉 Your order has been delivered! Thank you for choosing Samson Connect Meals.');
+  }, 1000);
+}
+
+setTimeout(() => {
+  if (typeof google === 'undefined' || !google.maps) {
+    console.warn('Google Maps failed to load within 10 seconds');
+    showMapError('Google Maps is taking too long to load.');
+  }
+}, 10000);
+
+// Diagnostic function to check map loading status
+function diagnoseMapLoading() {
+  console.log('=== MAP LOADING DIAGNOSTICS ===');
+  console.log('Google Maps API available:', typeof google !== 'undefined');
+  console.log('Google Maps object available:', typeof google !== 'undefined' && typeof google.maps !== 'undefined');
+  console.log('Map element exists:', !!document.getElementById('map'));
+  console.log('User coordinates:', userCoords);
+  console.log('Supplier coordinates:', supplierCoords);
+  console.log('Order data:', orderData);
+  console.log('Current URL:', window.location.href);
+  console.log('Order ID from URL:', new URLSearchParams(window.location.search).get('orderId'));
+  console.log('Order ID from localStorage:', localStorage.getItem('lastOrderId'));
+  console.log('================================');
+}
+
+// Add diagnostic button to the page
+window.addEventListener('DOMContentLoaded', () => {
+  // Add diagnostic button after modal is closed
+  setTimeout(() => {
+    const diagnosticBtn = document.createElement('button');
+    diagnosticBtn.textContent = '🔍 Diagnose Map';
+    diagnosticBtn.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 9999;
+      background: #16a34a;
+      color: white;
+      border: none;
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+    `;
+    diagnosticBtn.onclick = diagnoseMapLoading;
+    document.body.appendChild(diagnosticBtn);
+  }, 2000);
+});
+</script>
+
+
+
+  <!-- Google Maps API with proper callback -->
+  <script>
+    // Global callback for Google Maps initialization
+    window.initMap = function() {
+      console.log('Google Maps API loaded successfully');
+      // The map will be initialized by initializeOrderTracking()
+    };
+    
+    // Lazy load Google Maps API only when needed
+    function loadGoogleMapsAPI() {
+      return new Promise((resolve, reject) => {
+        if (typeof google !== 'undefined' && google.maps) {
+          console.log('Google Maps already loaded');
+          resolve();
+          return;
+        }
+        
+        console.log('Loading Google Maps API...');
+        const script = document.createElement('script');
+        script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyCSvZmGKlv9reCpsacvBhxhOrN7eMzOGCA&callback=initMap&loading=async';
+        script.async = true;
+        script.defer = true;
+        
+        script.onload = () => {
+          console.log('Google Maps script loaded');
+          // Wait for the callback to be called
+          const checkGoogle = () => {
+            if (typeof google !== 'undefined' && google.maps) {
+              resolve();
+            } else {
+              setTimeout(checkGoogle, 100);
+            }
+          };
+          checkGoogle();
+        };
+        
+        script.onerror = () => {
+          console.error('Failed to load Google Maps script');
+          reject(new Error('Failed to load Google Maps API'));
+        };
+        
+        document.head.appendChild(script);
+      });
+    }
+    
+    // Override the existing initializeOrderTracking function
+    window.initializeOrderTracking = async function() {
+      try {
+        console.log('Starting order tracking initialization...');
+        
+        // Get order ID from URL or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('orderId') || localStorage.getItem('lastOrderId');
+        
+        console.log('Order ID:', orderId);
+        
+        if (!orderId) {
+          console.log('No order ID found, using legacy method');
+          // Fallback to old method if no order ID
+          initializeMapAndDataLegacy();
+          return;
+        }
+
+        // Show loading state
+        showLoadingState();
+        
+        // Fetch real order data
+        console.log('Fetching order data...');
+        const response = await fetch(`/api/checkout/track/${orderId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch order data');
+        }
+        
+        orderData = await response.json();
+        console.log('Order data received:', orderData);
+        
+        // Update UI with real data
+        updateOrderInfo(orderData);
+        
+        // Load Google Maps API only when needed
+        try {
+          console.log('Loading Google Maps API...');
+          await loadGoogleMapsAPI();
+          console.log('Google Maps loaded, initializing map...');
+          initMapWithRealData();
+        } catch (error) {
+          console.error('Failed to load Google Maps:', error);
+          showMapError('Google Maps failed to load. Check your internet connection.');
+        }
+        
+        // Start real-time tracking
+        startRealTimeTracking(orderId);
+        
+      } catch (error) {
+        console.error('Error initializing order tracking:', error);
+        // Fallback to legacy method
+        initializeMapAndDataLegacy();
+      }
+    };
+  </script>
+
+</body>
+</html>

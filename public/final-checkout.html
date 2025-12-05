@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Checkout | Samson Connect Meals</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+<style>
+  body { background-color: #fff8f0; }
+  .header { background-color: #ff6600; border-bottom: 4px solid #facc15; }
+  .header a.logo-text { font-weight: 800; font-size: 1.375rem; color: white; }
+  .header img.logo-img { width: 48px; height: 48px; border-radius: 9999px; border: 2px solid white; background: white; padding: 4px; object-fit: contain; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  .progress-bar { background-color: #f3f4f6; }
+  .progress-text { color: #4b5563; font-weight: 600; }
+  .progress-current { color: #ff6600; font-weight: 700; }
+  .btn-confirm { background-color: #16a34a; transition: background-color 0.3s; }
+  .btn-confirm:hover { background-color: #15803d; }
+  .btn-confirm:disabled { background-color: #9ca3af; cursor: not-allowed; }
+  .text-accent { color: #ff6600; font-weight: 700; }
+  .text-highlight { color: #facc15; font-weight: 600; }
+  
+  /* Location status styles */
+  .location-status {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .location-pending {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 2px solid #f59e0b;
+  }
+  .location-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 2px solid #10b981;
+  }
+  .location-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 2px solid #ef4444;
+  }
+  
+  /* Loading spinner */
+  .spinner {
+    border: 3px solid #f3f4f6;
+    border-top: 3px solid #ff6600;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+<header class="header p-4 shadow-md">
+  <div class="max-w-6xl mx-auto flex items-center justify-between">
+    <a href="menu.html" class="flex items-center space-x-3">
+      <img src="https://via.placeholder.com/50x50.png?text=Logo" alt="Logo" class="logo-img" />
+      <span class="logo-text">Samson Connect Meals</span>
+    </a>
+  </div>
+</header>
+
+<div class="w-full progress-bar p-3 shadow">
+  <div class="max-w-4xl mx-auto flex justify-between text-sm">
+    <span class="progress-text">Cart</span>
+    <span class="progress-text">Supplier</span>
+    <span class="progress-current">Checkout</span>
+  </div>
+</div>
+
+<main class="max-w-4xl mx-auto flex-grow p-6 space-y-6">
+
+  <section id="location-status" class="location-status location-pending" style="display: none;">
+    <div id="location-content">
+      <span class="spinner"></span>
+      Requesting location access...
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-lg p-6 border-2" style="border-color: #facc15;">
+    <h2 class="text-xl mb-4 text-accent">Order Summary</h2>
+    <ul id="order-items-list" class="list-disc list-inside text-gray-700 space-y-1 mb-4"></ul>
+
+    <div class="space-y-1">
+      <p class="text-gray-700">Subtotal: <span id="order-subtotal" class="font-semibold">0 TSH</span></p>
+      <p class="text-gray-700">Delivery Fee: <span id="delivery-fee" class="font-semibold">0 TSH</span></p>
+    </div>
+
+    <p class="text-gray-700 mt-2">Supplier: <span id="supplier-name" class="font-semibold text-green-600">Loading...</span></p>
+    <p class="text-gray-700 mt-1">Distance: <span id="distance-text" class="font-semibold text-yellow-600">Calculating...</span></p>
+    <p class="text-gray-700 mt-1">ETA: <span id="eta-text" class="font-semibold text-yellow-600">Calculating...</span></p>
+    <p class="text-lg font-bold mt-2 text-highlight">Total: <span id="order-total" class="text-accent">0 TSH</span></p>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-lg p-6 border-2 space-y-4" style="border-color: #facc15;">
+    <h2 class="text-xl text-accent font-bold">Delivery Address</h2>
+    <div class="space-y-3">
+      <textarea id="delivery-address" 
+                placeholder="Enter your detailed delivery address..." 
+                class="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                rows="3"></textarea>
+      <button id="get-location-btn" 
+              class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors">
+        📍 Use My Current Location
+      </button>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-lg p-6 border-2 space-y-4" style="border-color: #facc15;">
+    <h2 class="text-xl text-accent font-bold">Payment Method</h2>
+    <label class="flex items-center space-x-3 text-gray-700 font-semibold cursor-pointer">
+      <input type="radio" name="payment" value="online" style="accent-color: #facc15;" />
+      <span>Pay Online</span>
+    </label>
+    <label class="flex items-center space-x-3 text-gray-700 font-semibold cursor-pointer">
+      <input type="radio" name="payment" value="cod" style="accent-color: #facc15;" />
+      <span>Cash on Delivery</span>
+    </label>
+  </section>
+
+  <div>
+    <button id="confirm-order-btn" class="w-full text-white py-3 rounded-xl font-extrabold shadow-lg hover:shadow-xl btn-confirm">
+      Confirm Order
+    </button>
+  </div>
+
+</main>
+
+<footer class="text-center p-4 text-white" style="background-color: #ff6600; border-top: 4px solid #facc15;">
+  © 2025 Samson Connect Meals. All rights reserved.
+</footer>
+
+<script>
+let userLocation = null;
+const supplierLocation = { lat: -6.7924, lng: 39.2083 }; // Default supplier location
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadFinalOrderSummary();
+    
+    document.getElementById('get-location-btn').addEventListener('click', requestLocation);
+    document.getElementById('confirm-order-btn').addEventListener('click', handleCheckout);
+    
+    // Auto-request location on page load
+    setTimeout(requestLocation, 1000);
+});
+
+function updateLocationStatus(status, message, isError = false) {
+    const statusEl = document.getElementById('location-status');
+    const contentEl = document.getElementById('location-content');
+    
+    statusEl.style.display = 'block';
+    statusEl.className = `location-status ${isError ? 'location-error' : status === 'success' ? 'location-success' : 'location-pending'}`;
+    contentEl.innerHTML = message;
+    
+    if (status === 'success' || isError) {
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, 3000);
+    }
+}
+
+function requestLocation() {
+    if (!navigator.geolocation) {
+        updateLocationStatus('error', '❌ Geolocation is not supported by your browser', true);
+        return;
+    }
+
+    updateLocationStatus('pending', '<span class="spinner"></span>Getting your location...');
+
+    const options = {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000 // 5 minutes
+    };
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+            
+            updateLocationStatus('success', '✅ Location obtained successfully!');
+            
+            // Reverse geocode to get address
+            reverseGeocode(userLocation);
+            
+            // Calculate distance and ETA
+            calculateDistanceAndETA();
+        },
+        (error) => {
+            handleLocationError(error);
+        },
+        options
+    );
+}
+
+function handleLocationError(error) {
+    let message = '';
+    let instructions = '';
+    
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            message = '❌ Location access denied';
+            instructions = 'Please enable location access in your browser settings and refresh the page.';
+            break;
+        case error.POSITION_UNAVAILABLE:
+            message = '❌ Location information unavailable';
+            instructions = 'Please check your internet connection or enter address manually.';
+            break;
+        case error.TIMEOUT:
+            message = '❌ Location request timed out';
+            instructions = 'Please try again or enter address manually.';
+            break;
+        default:
+            message = '❌ Unknown location error';
+            instructions = 'Please enter your address manually.';
+            break;
+    }
+    
+    updateLocationStatus('error', `${message}<br><small>${instructions}</small>`, true);
+}
+
+function reverseGeocode(coords) {
+    // Using a simple approach - in production, use Google Geocoding API or similar
+    const addressField = document.getElementById('delivery-address');
+    if (!addressField.value.trim()) {
+        addressField.value = `Lat: ${coords.lat.toFixed(6)}, Lng: ${coords.lng.toFixed(6)}`;
+    }
+}
+
+function calculateDistanceAndETA() {
+    if (!userLocation) return;
+    
+    // Simple distance calculation (Haversine formula)
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (userLocation.lat - supplierLocation.lat) * Math.PI / 180;
+    const dLng = (userLocation.lng - supplierLocation.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(supplierLocation.lat * Math.PI / 180) * Math.cos(userLocation.lat * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    
+    // Estimate ETA (assuming average speed of 30 km/h in city)
+    const eta = Math.round((distance / 30) * 60); // Convert to minutes
+    
+    document.getElementById('distance-text').textContent = `${distance.toFixed(1)} km`;
+    document.getElementById('eta-text').textContent = `${eta} mins`;
+    
+    // Store for order success page
+    localStorage.setItem('distance', distance.toFixed(1));
+    localStorage.setItem('eta', eta.toString());
+}
+
+async function loadFinalOrderSummary() {
+    const username = localStorage.getItem('username');
+    const supplierName = localStorage.getItem('selectedSupplierName');
+    const deliveryFee = parseInt(localStorage.getItem('deliveryFee') || '0', 10);
+
+    if (!username) {
+        alert("User not logged in. Redirecting to login.");
+        window.location.href = 'sign up.html';
+        return;
+    }
+
+    try {
+        const res = await fetch(`http://localhost:5000/api/cart/${username}`);
+        if (!res.ok) throw new Error('Failed to fetch cart data.');
+        const cart = await res.json();
+        
+        const orderList = document.getElementById('order-items-list');
+        orderList.innerHTML = '';
+        let subtotal = 0;
+
+        if (cart.length > 0) {
+            cart.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                subtotal += itemTotal;
+                const li = document.createElement('li');
+                li.innerHTML = `${item.quantity}x ${item.name} - <span class="font-semibold">${itemTotal.toLocaleString()} TSH</span>`;
+                orderList.appendChild(li);
+            });
+        } else {
+            orderList.innerHTML = '<li>Your cart is empty.</li>';
+        }
+
+        const total = subtotal + deliveryFee;
+        document.getElementById('supplier-name').textContent = supplierName || 'N/A';
+        document.getElementById('order-subtotal').textContent = `${subtotal.toLocaleString()} TSH`;
+        document.getElementById('delivery-fee').textContent = `${deliveryFee.toLocaleString()} TSH`;
+        document.getElementById('order-total').textContent = `${total.toLocaleString()} TSH`;
+
+    } catch (err) {
+        console.error('Error loading order summary:', err);
+        document.getElementById('order-items-list').innerHTML = '<li>Failed to load cart.</li>';
+    }
+}
+
+async function handleCheckout() {
+    const username = localStorage.getItem('username');
+    const supplierName = localStorage.getItem('selectedSupplierName');
+    const deliveryFee = parseInt(localStorage.getItem('deliveryFee') || '0', 10);
+    const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value;
+    const deliveryAddress = document.getElementById('delivery-address').value.trim();
+
+    if (!paymentMethod) {
+        alert("Please select a payment method.");
+        return;
+    }
+
+    if (!deliveryAddress) {
+        alert("Please enter your delivery address.");
+        return;
+    }
+
+    // If no location obtained, try one more time
+    if (!userLocation) {
+        const shouldTryLocation = confirm("We don't have your location yet. Would you like to try getting it again for better delivery tracking?");
+        if (shouldTryLocation) {
+            requestLocation();
+            setTimeout(() => {
+                if (userLocation) {
+                    proceedWithCheckout();
+                } else {
+                    // Proceed without exact location
+                    proceedWithCheckout();
+                }
+            }, 3000);
+            return;
+        }
+    }
+
+    proceedWithCheckout();
+
+    async function proceedWithCheckout() {
+        const coords = userLocation || { lat: -6.7924, lng: 39.2083 }; // fallback
+        const distance = localStorage.getItem('distance') || '0';
+        const eta = localStorage.getItem('eta') || '0';
+        const supplierId = localStorage.getItem('selectedSupplierId') || null; // optional
+
+        try {
+            // Fetch cart items to include in checkout
+            console.log('Fetching cart for username:', username);
+            const cartResponse = await fetch(`http://localhost:5000/api/cart/${username}`);
+            console.log('Cart response status:', cartResponse.status);
+            
+            if (!cartResponse.ok) {
+                const errorText = await cartResponse.text();
+                console.error('Cart fetch error:', errorText);
+                throw new Error(`Failed to fetch cart items: ${cartResponse.status} ${errorText}`);
+            }
+            let cartItems = await cartResponse.json();
+            console.log('Cart items received:', cartItems);
+            
+            if (!cartItems || cartItems.length === 0) {
+                // Try debug endpoint as fallback
+                console.log('Cart empty, trying debug endpoint...');
+                try {
+                    const debugResponse = await fetch(`http://localhost:5000/api/checkout/debug/cart/${username}`);
+                    if (debugResponse.ok) {
+                        const debugData = await debugResponse.json();
+                        console.log('Debug cart data:', debugData);
+                        if (debugData.cartItems && debugData.cartItems.length > 0) {
+                            cartItems = debugData.cartItems;
+                        }
+                    }
+                } catch (debugErr) {
+                    console.error('Debug endpoint failed:', debugErr);
+                }
+                
+                if (!cartItems || cartItems.length === 0) {
+                    alert('Your cart is empty. Please add items before checkout.');
+                    return;
+                }
+            }
+
+            // Convert cart items to the format expected by the API
+            const items = cartItems.map(item => ({
+                name: item.name,
+                meal_id: item.meal_id,
+                unit_price: Number(item.price || 0),
+                quantity: Number(item.quantity || 1),
+                subtotal: (Number(item.price || 0) * Number(item.quantity || 1))
+            ));
+
+            const payload = {
+                username,
+                items,                     // Include cart items
+                supplierName,
+                supplierId,
+                deliveryFee,
+                paymentMethod,
+                deliveryAddress,
+                coordinates: coords,
+                user_coords: JSON.stringify(coords),
+                delivery_lat: coords.lat,
+                delivery_lng: coords.lng,
+                distance: parseFloat(distance),
+                eta: parseInt(eta, 10)
+            };
+
+            console.log('═══════════════════════════════════════════');
+            console.log('📤 SENDING CHECKOUT PAYLOAD');
+            console.log('═══════════════════════════════════════════');
+            console.log('Username:', payload.username);
+            console.log('Items count:', payload.items?.length || 0);
+            console.log('Items:', payload.items);
+            console.log('Total:', cartItems.reduce((s, i) => s + (i.price * i.quantity), 0) + deliveryFee);
+            console.log('Payment Method:', payload.paymentMethod);
+            console.log('Delivery Address:', payload.deliveryAddress);
+            console.log('═══════════════════════════════════════════');
+
+            const res = await fetch('http://localhost:5000/api/checkout/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            
+            console.log('📥 CHECKOUT RESPONSE:');
+            console.log('Status:', res.status);
+            console.log('Response:', data);
+            console.log('═══════════════════════════════════════════');
+
+            if (res.ok) {
+                // store comprehensive info for order-success.html and supplier visibility
+                localStorage.setItem('orderInfo', JSON.stringify({
+                    total: data.total,
+                    userCoords: coords,
+                    supplierCoords: supplierLocation,
+                    distance: distance,
+                    eta: eta,
+                    deliveryAddress: deliveryAddress,
+                    orderId: data.orderId || data.order_id || null
+                }));
+
+                // also store individual items for the success page
+                localStorage.setItem('userCoords', JSON.stringify(coords));
+                localStorage.setItem('supplierCoords', JSON.stringify(supplierLocation));
+
+                // Store order ID for tracking
+                if (data.orderId) {
+                    localStorage.setItem('lastOrderId', data.orderId);
+                }
+
+                // CLEAR CART from database after successful checkout
+                try {
+                    const clearCartRes = await fetch(`http://localhost:5000/api/cart/${username}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    if (clearCartRes.ok) {
+                        console.log('✅ Cart cleared successfully');
+                        // Also clear from localStorage
+                        localStorage.removeItem('cart');
+                        localStorage.removeItem('cartItems');
+                    } else {
+                        console.warn('⚠️ Failed to clear cart from server:', clearCartRes.status);
+                    }
+                } catch (clearErr) {
+                    console.error('❌ Error clearing cart:', clearErr);
+                    // Don't block redirect if cart clear fails
+                }
+
+                // redirect to order success page with order ID
+                const successUrl = data.orderId ? 
+                    `order-success.html?orderId=${data.orderId}` : 
+                    'order-success.html';
+                window.location.href = successUrl;
+            } else {
+                alert(`❌ Failed to confirm order: ${data.message || data.error || 'Unknown error'}`);
+            }
+        } catch (err) {
+            console.error("Checkout error:", err);
+            alert("❌ Failed to confirm order. Please ensure your internet connection is stable and try again.");
+        }
+    }
+}
+</script>
+
+</body>
+</html>

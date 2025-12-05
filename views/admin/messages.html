@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages | Samson Connect Meals</title>
+<style>
+body {margin:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f4f4f8; display:flex; min-height:100vh;}
+.sidebar {width:250px; background:#1a1a1a; color:white; display:flex; flex-direction:column; padding:20px; box-shadow:3px 0 12px rgba(0,0,0,0.3);}
+.sidebar h2 {margin:0 0 30px 0; font-size:22px; color:#ff6600; text-align:center;}
+.sidebar a {color:white; text-decoration:none; padding:12px 15px; border-radius:8px; margin-bottom:10px; display:block; transition:0.3s;}
+.sidebar a:hover, .sidebar a.active {background:#ff6600; color:black;}
+.main {flex:1; padding:30px;}
+.main h1 {color:#ff6600; margin-bottom:20px;}
+.cards {display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;}
+.card {flex:1 1 200px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); text-align:center; transition:transform 0.3s;}
+.card:hover {transform:translateY(-5px); box-shadow:0 8px 20px rgba(0,0,0,0.25);}
+.card h3 {margin-bottom:10px; color:#ff6600;}
+table {width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+table th, table td {padding:12px 15px; border-bottom:1px solid #ddd; text-align:left;}
+table th {background:#ff6600; color:white;}
+table tr:hover {background:#f9f9f9;}
+table tr.read { background:#f0f0f0; color:#888; }
+.btn { padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:14px; margin-right:5px; }
+.btn-read { background:#4caf50; color:white; }
+.btn-remove { background:#f44336; color:white; }
+</style>
+<script src="/theme.js"></script>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="admin.html">Dashboard</a>
+    <a href="users.html">User Management</a>
+    <a href="orders.html">Orders</a>
+    <a href="meals.html">Meals Menu</a>
+    <a href="analytics.html">Analytics</a>
+    <a href="settings.html">Settings</a>
+    <a href="messages.html" class="active">Messages</a>
+</div>
+
+<div class="main">
+    <h1>Messages & Suggestions</h1>
+
+    <!-- Cards -->
+    <div class="cards">
+        <div class="card">
+            <h3>Total Messages</h3>
+            <p id="totalMessages">0</p>
+        </div>
+        <div class="card">
+            <h3>Unread Messages</h3>
+            <p id="unreadMessages">0</p>
+        </div>
+        <div class="card">
+            <h3>Read Messages</h3>
+            <p id="readMessages">0</p>
+        </div>
+    </div>
+
+    <!-- Messages Table -->
+    <table id="messagesTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Message</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dynamic rows -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+async function fetchMessages() {
+    const tbody = document.querySelector('#messagesTable tbody');
+    tbody.innerHTML = '';
+
+    const res = await fetch('http://localhost:5000/api/contact');
+    const messages = await res.json();
+
+    let total = messages.length;
+    let readCount = 0;
+    let unreadCount = 0;
+
+    messages.forEach(msg => {
+        if (msg.read) readCount++; else unreadCount++;
+
+        const tr = document.createElement('tr');
+        if (msg.read) tr.classList.add('read');
+
+        tr.innerHTML = `
+            <td>${msg.id}</td>
+            <td>${msg.name}</td>
+            <td>${msg.email}</td>
+            <td>${msg.message}</td>
+            <td>${msg.read ? 'Read' : 'Unread'}</td>
+            <td>${new Date(msg.created_at).toLocaleString()}</td>
+            <td>
+                ${!msg.read ? `<button class="btn btn-read" onclick="markAsRead(${msg.id})">Mark as Read</button>` : ''}
+                <button class="btn btn-remove" onclick="removeMessage(${msg.id})">Remove</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('totalMessages').textContent = total;
+    document.getElementById('readMessages').textContent = readCount;
+    document.getElementById('unreadMessages').textContent = unreadCount;
+}
+
+async function markAsRead(id) {
+    await fetch(`http://localhost:5000/api/contact/${id}/read`, { method: 'PUT' });
+    fetchMessages();
+}
+
+async function removeMessage(id) {
+    if (!confirm('Are you sure you want to remove this message?')) return;
+    await fetch(`http://localhost:5000/api/contact/${id}`, { method: 'DELETE' });
+    fetchMessages();
+}
+
+// Initial load
+fetchMessages();
+</script>
+
+</body>
+</html>

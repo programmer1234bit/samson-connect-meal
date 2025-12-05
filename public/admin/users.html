@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Management | Samson Connect Meals</title>
+<style>
+body {margin:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f4f4f8; display:flex; min-height:100vh;}
+.sidebar {width:250px; background:#1a1a1a; color:white; display:flex; flex-direction:column; padding:20px; box-shadow:3px 0 12px rgba(0,0,0,0.3);}
+.sidebar h2 {margin:0 0 30px 0; font-size:22px; color:#ff6600; text-align:center;}
+.sidebar a {color:white; text-decoration:none; padding:12px 15px; border-radius:8px; margin-bottom:10px; display:block; transition:0.3s;}
+.sidebar a:hover, .sidebar a.active {background:#ff6600; color:black;}
+.main {flex:1; padding:30px;}
+.main h1 {color:#ff6600; margin-bottom:20px;}
+.cards {display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;}
+.card {flex:1 1 200px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); text-align:center; transition:transform 0.3s;}
+.card:hover {transform:translateY(-5px); box-shadow:0 8px 20px rgba(0,0,0,0.25);}
+.card h3 {margin-bottom:10px; color:#ff6600;}
+.search-box {margin-bottom:20px;}
+.search-box input {width:100%; padding:10px; border-radius:6px; border:1px solid #ccc;}
+table {width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+table th, table td {padding:12px 15px; border-bottom:1px solid #ddd; text-align:left;}
+table th {background:#ff6600; color:white;}
+table tr:hover {background:#f9f9f9;}
+.btn {padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:14px;}
+.btn-edit {background:#4caf50; color:white;}
+.btn-delete {background:#f44336; color:white;}
+.role-filter {margin-bottom:20px;}
+.role-filter button {padding:8px 16px; border:none; border-radius:6px; cursor:pointer; margin-right:10px; background:#ff6600; color:white; transition:0.3s;}
+.role-filter button.active, .role-filter button:hover {background:#e65c00;}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="admin.html">Dashboard</a>
+    <a href="users.html" class="active">User Management</a>
+    <a href="orders.html">Orders</a>
+    <a href="meals.html">Meals Menu</a>
+    <a href="analytics.html">Analytics</a>
+    <a href="settings.html">Settings</a>
+    <a href="messages.html">Messages</a>
+</div>
+
+<div class="main">
+    <h1>User Management</h1>
+
+    <!-- Cards -->
+    <div class="cards">
+        <div class="card">
+            <h3>Total Users</h3>
+            <p id="totalUsers">0</p>
+        </div>
+        <div class="card">
+            <h3>Total Customers</h3>
+            <p id="totalCustomers">0</p>
+        </div>
+        <div class="card">
+            <h3>Total Meal Suppliers</h3>
+            <p id="totalSuppliers">0</p>
+        </div>
+    </div>
+
+    <!-- Role Filter -->
+   <div class="role-filter">
+    <button class="active" onclick="filterRole('all')">All Users</button>
+    <button onclick="filterRole('customer')">Customers</button>
+    <button onclick="filterRole('meal_supplier')">Meal Suppliers</button>
+</div>
+
+
+    <!-- Search -->
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search users by username or email..." onkeyup="filterUsers()">
+    </div>
+
+    <!-- Users Table -->
+    <table id="usersTable">
+        <thead>
+            <tr>
+                <th>ID</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- Toast Notification -->
+    <div id="toast" style="position: fixed; bottom: 20px; right: 20px; background: #4caf50; color: white; padding: 12px 20px; border-radius: 8px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-family: 'Segoe UI', sans-serif; transition: transform 0.3s, opacity 0.3s;"></div>
+</div>
+<script>
+let usersData = [];
+let currentRole = 'all';
+
+async function fetchUsers() {
+    try {
+        const res = await fetch('http://localhost:5000/api/users');
+        usersData = await res.json();
+        renderUsers();
+    } catch (err) {
+        console.error(err);
+        showToast('Error fetching users ❌', true);
+    }
+}
+
+function renderUsers() {
+    const tbody = document.querySelector('#usersTable tbody');
+    tbody.innerHTML = '';
+
+    const searchValue = document.getElementById('searchInput').value.toLowerCase();
+    const filteredUsers = usersData.filter(u =>
+        (currentRole === 'all' || u.role.toLowerCase() === currentRole.toLowerCase()) &&
+        (u.username.toLowerCase().includes(searchValue) || u.email.toLowerCase().includes(searchValue))
+    );
+
+    filteredUsers.forEach(user => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${user.id}</td>
+            <td class="editable" data-field="username">${user.username}</td>
+            <td class="editable" data-field="email">${user.email}</td>
+            <td class="editable" data-field="role">${user.role}</td>
+            <td class="editable" data-field="status">${user.status}</td>
+            <td>
+                <button class="btn btn-edit">Edit</button>
+                <button class="btn btn-delete">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        tr.querySelector('.btn-edit').addEventListener('click', () => enableInlineEdit(tr, user.id));
+        tr.querySelector('.btn-delete').addEventListener('click', () => deleteUser(user.id, tr));
+    });
+
+    // ✅ Update stats after rendering
+    updateDashboardStats();
+}
+
+function updateDashboardStats() {
+    const totalUsers = usersData.length;
+
+    const totalCustomers = usersData.filter(
+        u => u.role && (u.role.toLowerCase() === 'customer' || u.role.toLowerCase() === 'user')
+    ).length;
+
+    const totalSuppliers = usersData.filter(
+        u => u.role && u.role.toLowerCase() === 'meal_supplier'
+    ).length;
+
+    document.getElementById('totalUsers').textContent = totalUsers;
+    document.getElementById('totalCustomers').textContent = totalCustomers;
+    document.getElementById('totalSuppliers').textContent = totalSuppliers;
+}
+
+function enableInlineEdit(tr, userId) {
+    tr.querySelectorAll('.editable').forEach(td => {
+        const val = td.textContent;
+        const input = document.createElement(td.dataset.field === 'role' || td.dataset.field === 'status' ? 'select' : 'input');
+        if (input.tagName === 'SELECT') {
+            const options = td.dataset.field === 'role' ? ['Admin','User','meal_supplier'] : ['Active','Inactive'];
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt; option.textContent = opt;
+                if (opt === val) option.selected = true;
+                input.appendChild(option);
+            });
+        } else input.value = val;
+        input.style.width = '100%';
+        td.textContent = ''; td.appendChild(input);
+    });
+
+    const actionsTd = tr.querySelector('td:last-child');
+    actionsTd.innerHTML = '';
+    const saveBtn = document.createElement('button'); saveBtn.className='btn btn-edit'; saveBtn.textContent='Save';
+    const cancelBtn = document.createElement('button'); cancelBtn.className='btn btn-delete'; cancelBtn.textContent='Cancel';
+    actionsTd.appendChild(saveBtn); actionsTd.appendChild(cancelBtn);
+
+    saveBtn.addEventListener('click', () => saveInlineEdit(tr, userId));
+    cancelBtn.addEventListener('click', fetchUsers);
+}
+
+async function saveInlineEdit(tr, userId) {
+    const updatedUser = {};
+    tr.querySelectorAll('.editable').forEach(td => updatedUser[td.dataset.field] = td.querySelector('input, select').value);
+
+    try {
+        await fetch(`http://localhost:5000/api/users/${userId}`, {
+            method: 'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(updatedUser)
+        });
+        showToast('User updated successfully ✅');
+        fetchUsers();
+    } catch (err) { console.error(err); showToast('Error updating user ❌', true); }
+}
+
+async function deleteUser(id, tr) {
+    if(!confirm('Are you sure you want to delete this user?')) return;
+    try {
+        await fetch(`http://localhost:5000/api/users/${id}`, { method:'DELETE' });
+        tr.style.opacity=0; setTimeout(fetchUsers, 500);
+        showToast('User deleted successfully ✅');
+    } catch (err) { console.error(err); showToast('Error deleting user ❌', true); }
+}
+
+function showToast(msg, err=false) {
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.style.background=err?'#f44336':'#4caf50'; t.style.display='block';
+    t.style.transform='translateY(0)'; t.style.opacity=1;
+    setTimeout(()=>{ t.style.transform='translateY(20px)'; t.style.opacity=0; setTimeout(()=>t.style.display='none',300); },2000);
+}
+
+function filterRole(role) {
+    currentRole=role;
+    document.querySelectorAll('.role-filter button').forEach(b=>b.classList.remove('active'));
+    document.querySelector(`.role-filter button[onclick="filterRole('${role}')"]`).classList.add('active');
+    renderUsers();
+}
+function filterUsers(){renderUsers();}
+
+fetchUsers();
+</script>
+<script src="/theme.js"></script>
+
+
+</body>
+</html>

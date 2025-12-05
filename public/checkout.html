@@ -1,0 +1,152 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout | Samson Connect Meals</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <style>
+    .bg-warm-offwhite { background-color: #fff8f0; }
+    .bg-brand-orange { background-color: #ff6600; }
+    .border-yellow-500-custom { border-color: #facc15; }
+    .border-yellow-300-custom { border-color: #fde68a; }
+    .text-yellow-600-custom { color: #ca8a04; }
+    .text-green-600-custom { color: #16a34a; }
+    .text-gray-900-custom { color: #1f2937; }
+    .text-gray-600-custom { color: #4b5563; }
+    .text-gray-500-custom { color: #6b7280; }
+  </style></head><body class="bg-warm-offwhite text-gray-800">
+  <header class="bg-brand-orange text-white p-4 shadow-md border-b-4 border-yellow-500-custom">
+    <div class="max-w-6xl mx-auto grid grid-cols-3 items-center">
+      <div class="flex items-center space-x-3">
+        <img src="https://via.placeholder.com/50x50.png?text=Logo" alt="Logo" class="w-12 h-12 object-contain rounded-full border-2 border-white shadow"/>
+        <span class="text-xl font-extrabold">Samson Connect Meals</span>
+      </div>
+      <div class="text-center">
+        <h1 class="text-lg font-bold">Checkout</h1>
+        <p class="text-sm">Review your order & choose a meal supplier</p>
+      </div>
+      <div></div>
+    </div>
+  </header>
+
+  <section class="max-w-4xl mx-auto mt-6 bg-white shadow-lg rounded-xl p-6 border-2 border-yellow-500-custom">
+    <h2 class="text-lg font-bold mb-4 text-brand-orange">Order Summary</h2>
+    <div id="order-summary-items" class="space-y-3">
+      </div>
+    <div class="flex justify-between items-center border-t border-yellow-300-custom pt-2 mt-2">
+      <span class="font-semibold text-gray-900-custom">Subtotal</span>
+      <span id="order-subtotal" class="font-semibold text-gray-900-custom">0 TSH</span>
+    </div>
+    <div class="flex justify-between items-center pt-2 mt-2">
+      <span class="font-semibold text-gray-900-custom">Delivery Fee</span>
+      <span id="delivery-fee" class="font-semibold text-gray-900-custom">0 TSH</span>
+    </div>
+    <div class="flex justify-between items-center border-t pt-2 mt-2 font-bold text-lg text-yellow-600-custom">
+      <span>Total</span>
+      <span id="order-total">0 TSH</span>
+    </div>
+  </section>
+
+  <section id="supplier-list" class="max-w-4xl mx-auto mt-6 grid md:grid-cols-2 gap-6">
+    </section>
+
+  <script>
+    const username = localStorage.getItem('username') || 'Guest';
+
+    const MIN_DELIVERY_FEE = 500;
+    const MAX_DELIVERY_FEE = 1000;
+    const DELIVERY_FEE = Math.floor(Math.random() * (MAX_DELIVERY_FEE - MIN_DELIVERY_FEE + 1)) + MIN_DELIVERY_FEE;
+
+    async function loadOrderSummary() {
+        try {
+            const res = await fetch(`/api/cart/${username}`);
+            if (!res.ok) {
+                if (res.status === 404) {
+                    console.error('Cart not found for this user.');
+                    return;
+                }
+                throw new Error('Failed to fetch cart.');
+            }
+            const cart = await res.json();
+            const container = document.getElementById('order-summary-items');
+            container.innerHTML = '';
+            let subtotal = 0;
+
+            if (cart.length === 0) {
+                container.innerHTML = '<p>Your cart is empty!</p>';
+                document.getElementById('order-subtotal').textContent = '0 TSH';
+                document.getElementById('delivery-fee').textContent = '0 TSH';
+                document.getElementById('order-total').textContent = '0 TSH';
+                return;
+            }
+
+            cart.forEach(item => {
+                const itemSubtotal = item.price * item.quantity;
+                subtotal += itemSubtotal;
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center';
+                div.innerHTML = `<span>${item.name} x${item.quantity}</span><span>${itemSubtotal.toLocaleString()} TSH</span>`;
+                container.appendChild(div);
+            });
+
+            const total = subtotal + DELIVERY_FEE;
+            document.getElementById('order-subtotal').textContent = `${subtotal.toLocaleString()} TSH`;
+            document.getElementById('delivery-fee').textContent = `${DELIVERY_FEE.toLocaleString()} TSH`;
+            document.getElementById('order-total').textContent = `${total.toLocaleString()} TSH`;
+        } catch (err) {
+            console.error('Error loading cart:', err);
+        }
+    }
+
+    async function loadMealSuppliers() {
+        try {
+            const res = await fetch('/api/users?role=meal_supplier');
+            if (!res.ok) {
+                throw new Error('Failed to fetch meal suppliers.');
+            }
+            const suppliers = await res.json();
+            const container = document.getElementById('supplier-list');
+            container.innerHTML = '';
+
+            suppliers.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'bg-white shadow-lg rounded-xl p-6 flex flex-col justify-between hover:shadow-2xl hover:scale-105 transition-transform duration-300 border-2 border-yellow-300-custom';
+                card.innerHTML = `
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900-custom">${s.restaurant_name || s.username}</h3>
+                        <p class="text-gray-600-custom">📍 ${s.location || 'Location not available'}</p>
+                        <p class="text-gray-600-custom">📞 <a href="tel:${s.phone}" class="text-yellow-600-custom hover:underline">${s.phone}</a></p>
+                        <p class="mt-2 text-sm text-gray-500-custom">⏱ Estimated Delivery: ${s.eta_min || 20} - ${s.eta_max || 40} min</p>
+                    </div>
+                    <div class="mt-4 flex justify-between items-center">
+                        <span class="text-lg font-semibold text-green-600-custom">Delivery: ${DELIVERY_FEE.toLocaleString()} TSH</span>
+                        <button onclick="selectSupplier('${s.id}', '${s.restaurant_name || s.username}')"
+                            class="bg-brand-orange hover:bg-yellow-500 text-white px-4 py-2 rounded-lg shadow font-semibold transition">
+                            Select Supplier
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        } catch (err) {
+            console.error('Error loading Meal Suppliers:', err);
+            alert('Failed to load Meal Suppliers.');
+        }
+    }
+
+    function selectSupplier(supplierId, supplierName) {
+      // ✅ Now saving the supplier's name to localStorage
+      localStorage.setItem('selectedSupplier', supplierId);
+      localStorage.setItem('selectedSupplierName', supplierName);
+      localStorage.setItem('deliveryFee', DELIVERY_FEE);
+      window.location.href = `final-checkout.html`; 
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadOrderSummary();
+        loadMealSuppliers();
+    });
+  </script>
+
+  <footer class="mt-10 p-4 text-center text-white bg-brand-orange border-t-4 border-yellow-500-custom">
+    © 2025 Samson Connect Meals. All rights reserved.
+  </footer></body></html>

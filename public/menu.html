@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samson Connect Meals | Menu</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #fff8f0;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ff6600;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 3px solid gold;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 22px;
+            color: white;
+            text-decoration: none;
+        }
+
+        .logo img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: white;
+            padding: 5px;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            text-decoration: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            background: black;
+            color: white;
+            transition: 0.3s;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        nav a:hover {
+            background: gold;
+            color: black;
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .cart-count {
+            background: #ff3333;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .menu-title {
+            text-align: center;
+            color: #ff6600;
+            font-size: 2.5em;
+            margin: 30px 0 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0 20px 0;
+        }
+
+        .tab-btn {
+            background: #ff6600;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            border: none;
+            font-size: 16px;
+        }
+
+        .tab-btn.active {
+            background: gold;
+            color: black;
+        }
+
+        .tab-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .menu-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+            padding: 0 20px;
+        }
+
+        .meal-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 280px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #ff6600;
+        }
+
+        .meal-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.25);
+        }
+
+        .meal-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            transition: transform 0.3s;
+            border: 2px solid #ffa500;
+        }
+
+        .meal-card:hover img {
+            transform: scale(1.05);
+        }
+
+        .meal-card h3 {
+            color: #ff6600;
+            margin: 10px 0 5px 0;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .meal-desc {
+            font-size: 14px;
+            color: #555;
+            height: 40px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .meal-price {
+            font-weight: bold;
+            color: #222;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            background: #fff8f0;
+            padding: 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .quantity-btn {
+            background: #ff6600;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .quantity-btn:hover {
+            background: gold;
+            color: black;
+            transform: scale(1.1);
+        }
+
+        .quantity-display {
+            font-weight: bold;
+            color: #333;
+            min-width: 30px;
+        }
+
+        .add-to-cart-btn {
+            background: #ff6600;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 100%;
+        }
+
+        .add-to-cart-btn:hover {
+            background: gold;
+            color: black;
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .add-to-cart-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .cart-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .cart-notification.show {
+            transform: translateX(0);
+        }
+
+        footer {
+            background: #ff6600;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            border-top: 3px solid gold;
+            font-size: 14px;
+            margin-top: auto;
+        }
+
+        @media (max-width: 768px) {
+            .menu-grid {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+            
+            .meal-card {
+                width: 95%;
+                max-width: 320px;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            nav {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .menu-title {
+                font-size: 2em;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="menu.html" class="logo">
+        <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=100&h=100&fit=crop&crop=center" alt="Samson Connect Meals Logo">
+        Samson Connect Meals
+    </a>
+    <nav>
+        <a href="menu.html">Menu</a>
+        <a href="services.html">Services</a>
+        <a href="about.html">About Us</a>
+        <a href="contact.html">Contact</a>
+        <a href="cart.html" id="cart-link">
+            Cart 🛒
+            <span class="cart-count" id="cart-count">0</span>
+        </a>
+    </nav>
+</header>
+
+<section class="menu">
+    <h2 class="menu-title">Our Menu 🍛</h2>
+
+    <div class="tabs">
+        <div class="tab-btn active" data-tab="street">Street Favorites</div>
+        <div class="tab-btn" data-tab="restaurant">Restaurant Classics</div>
+        <div class="tab-btn" data-tab="beverages">Beverages</div>
+    </div>
+
+    <div class="menu-grid" id="menu-grid"></div>
+</section>
+
+<div class="cart-notification" id="cart-notification">
+    Item added to cart successfully!
+</div>
+
+<footer>
+    © 2025 Samson Connect Meals. All rights reserved. Contact: samsonprogrammer@gmail.com
+</footer>
+
+<script>
+let currentTab = 'street';
+const username = localStorage.getItem('username') || 'Guest'; // You can set this on login
+
+// Fetch menu items from backend
+async function renderMenu(tab) {
+    const grid = document.getElementById('menu-grid');
+    grid.innerHTML = 'Loading... ⏳';
+
+    try {
+        const res = await fetch(`/api/menu?category=${tab}`);
+        if (!res.ok) throw new Error('Failed to fetch menu');
+        const menuItems = await res.json();
+
+        grid.innerHTML = '';
+
+        menuItems.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'meal-card';
+            card.dataset.id = item.id;
+            card.dataset.name = item.name;
+            card.dataset.price = item.price;
+
+            card.innerHTML = `
+                <img src="${item.img}" alt="${item.name}" loading="lazy">
+                <h3>${item.name}</h3>
+                <p class="meal-desc">${item.description}</p>
+                <p class="meal-price">Tsh ${Number(item.price).toLocaleString()}</p>
+                <div class="quantity-controls">
+                    <button class="quantity-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
+                    <span class="quantity-display" id="quantity-${item.id}">0</span>
+                    <button class="quantity-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
+                </div>
+                <button class="add-to-cart-btn" onclick="addToCart(${item.id}, '${item.name}', ${item.price})">Add to Cart</button>
+            `;
+            grid.appendChild(card);
+        });
+    } catch (err) {
+        console.error(err);
+        grid.innerHTML = '<p style="color:red;">Failed to load menu items.</p>';
+    }
+}
+
+// Switch tabs
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    renderMenu(tab);
+}
+
+// Quantity tracking
+let quantities = {};
+function updateQuantity(mealId, change) {
+    quantities[mealId] = Math.max(0, (quantities[mealId] || 0) + change);
+    document.getElementById(`quantity-${mealId}`).textContent = quantities[mealId];
+}
+
+// Add to cart backend
+async function addToCart(mealId, name, price) {
+    const quantity = quantities[mealId] || 0;
+    if (quantity <= 0) return alert("Select a quantity first!");
+
+    try {
+        const res = await fetch('/api/cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username,
+                meal_id: parseInt(mealId),
+                name,
+                price: parseFloat(price),
+                quantity: parseInt(quantity)
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Unknown error');
+
+        // Reset quantity display
+        quantities[mealId] = 0;
+        document.getElementById(`quantity-${mealId}`).textContent = '0';
+
+        showNotification();
+
+        // Update cart count with returned cart
+        const count = data.cart.reduce((sum, i) => sum + i.quantity, 0);
+        document.getElementById('cart-count').textContent = count;
+    } catch (err) {
+        console.error('Add to cart failed:', err);
+        alert("Failed to add to cart. Check console for details.");
+    }
+}
+
+
+// Update cart count badge
+async function updateCartCount() {
+    try {
+        const res = await fetch(`/api/cart/${username}`);
+        const items = await res.json();
+        const count = items.reduce((sum, i) => sum + i.quantity, 0);
+        document.getElementById('cart-count').textContent = count;
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// Cart notification
+function showNotification() {
+    const notification = document.getElementById('cart-notification');
+    notification.classList.add('show');
+    setTimeout(() => notification.classList.remove('show'), 3000);
+}
+
+// Initial render
+document.addEventListener('DOMContentLoaded', () => {
+    renderMenu(currentTab);
+    updateCartCount();
+    document.querySelectorAll('.tab-btn').forEach(btn =>
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+    );
+});
+</script>
+f
+</body>
+</html>

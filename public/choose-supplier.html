@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Choose Supplier | Samson Connect Meals</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+<style>
+  /* Custom colors */
+  .bg-warm-offwhite { background-color: #fff8f0; }
+  .bg-brand-orange { background-color: #ff6600; }
+  .border-yellow-500-custom { border-color: #facc15; }
+  .border-yellow-300-custom { border-color: #fde68a; }
+  .text-yellow-600-custom { color: #ca8a04; }
+  .text-green-600-custom { color: #16a34a; }
+  .text-gray-900-custom { color: #1f2937; }
+  .text-gray-600-custom { color: #4b5563; }
+  .text-gray-500-custom { color: #6b7280; }
+  
+   footer{
+  	width:100%;
+	bottom:0;
+	position:fixed;
+  }
+</style>
+</head>
+<body class="bg-warm-offwhite text-gray-800">
+
+<!-- Header -->
+<header class="bg-brand-orange text-white p-4 shadow-md border-b-4 border-yellow-500-custom">
+  <div class="max-w-6xl mx-auto grid grid-cols-3 items-center">
+    <!-- Logo + Brand -->
+    <div class="flex items-center space-x-3">
+      <img src="https://via.placeholder.com/50x50.png?text=Logo" alt="Logo"
+        class="w-12 h-12 object-contain rounded-full border-2 border-white shadow"/>
+      <span class="text-xl font-extrabold">Samson Connect Meals</span>
+    </div>
+    <!-- Page Title Centered -->
+    <div class="text-center">
+      <h1 class="text-lg font-bold">Choose Your Supplier</h1>
+      <p class="text-sm">Select the supplier that best fits your needs</p>
+    </div>
+    <div></div> <!-- Placeholder for symmetry -->
+  </div>
+</header>
+
+<!-- Order Summary -->
+<section class="max-w-4xl mx-auto mt-6 bg-white shadow-lg rounded-xl p-6 border-2 border-yellow-500-custom">
+  <h2 class="text-lg font-bold mb-4 text-brand-orange">Order Summary</h2>
+  <div id="order-summary-items" class="space-y-3">
+    <!-- Order items dynamically injected here -->
+  </div>
+  <div class="flex justify-between items-center border-t pt-2 mt-2 font-semibold text-yellow-600-custom" id="order-total">
+    <span>Total</span>
+    <span>0 TSH</span>
+  </div>
+</section>
+
+<!-- Supplier List -->
+<section id="supplier-list" class="max-w-4xl mx-auto mt-6 grid md:grid-cols-2 gap-6">
+  <!-- Supplier cards dynamically injected here -->
+</section>
+
+<script>
+// Get current username
+const username = localStorage.getItem('username') || 'Guest';
+
+// Load cart and populate order summary
+async function loadOrderSummary() {
+    try {
+        const res = await fetch(`/api/cart/${username}`);
+        const cart = await res.json();
+
+        const container = document.getElementById('order-summary-items');
+        container.innerHTML = '';
+
+        let total = 0;
+        if (cart.length === 0) {
+            container.innerHTML = '<p>Your cart is empty!</p>';
+        } else {
+            cart.forEach(item => {
+                const subtotal = item.price * item.quantity;
+                total += subtotal;
+
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center';
+                div.innerHTML = `<span>${item.name} x${item.quantity}</span><span>${subtotal.toLocaleString()} TSH</span>`;
+                container.appendChild(div);
+            });
+        }
+
+        document.getElementById('order-total').children[1].textContent = `${total.toLocaleString()} TSH`;
+    } catch (err) {
+        console.error('Error loading order summary:', err);
+    }
+}
+
+// Load suppliers dynamically
+async function loadSuppliers() {
+    try {
+        const res = await fetch('/api/suppliers');
+        const suppliers = await res.json();
+
+        const container = document.getElementById('supplier-list');
+        container.innerHTML = '';
+
+        suppliers.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'bg-white shadow-lg rounded-xl p-6 flex flex-col justify-between hover:shadow-2xl hover:scale-105 transition-transform duration-300 border-2 border-yellow-300-custom';
+            card.innerHTML = `
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900-custom">${s.name}</h3>
+                    <p class="text-gray-600-custom">📍 ${s.location}</p>
+                    <p class="text-gray-600-custom">📞 <a href="tel:${s.phone}" class="text-yellow-600-custom hover:underline">${s.phone}</a></p>
+                    <p class="mt-2 text-sm text-gray-500-custom">⏱ Estimated Delivery: ${s.eta_min} - ${s.eta_max} minutes</p>
+                </div>
+                <div class="mt-4 flex justify-between items-center">
+                    <span class="text-lg font-semibold text-green-600-custom">${s.price.toLocaleString()} TSH</span>
+                    <button onclick="selectSupplier(${s.id}, '${s.name.replace(/\s+/g,'-').toLowerCase()}')"
+                        class="bg-brand-orange hover:bg-yellow-500 text-white px-4 py-2 rounded-lg shadow font-semibold transition">
+                        Select Supplier
+                    </button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    } catch (err) {
+        console.error('Error loading suppliers:', err);
+        alert('Failed to load suppliers.');
+    }
+}
+
+// Redirect when supplier is selected
+function selectSupplier(supplierId, supplierSlug) {
+    window.location.href = `checkout.html?supplier=${supplierSlug}`;
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    loadOrderSummary();
+    loadSuppliers();
+});
+</script>
+
+<!-- Footer -->
+<footer class="mt-10 p-4 text-center text-white bg-brand-orange border-t-4 border-yellow-500-custom">
+  © 2025 Samson Connect Meals. All rights reserved.
+</footer>
+
+</body>
+</html>

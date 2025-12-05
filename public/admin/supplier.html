@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supplier Dashboard | Samson Connect Meals</title>
+    <style>
+        body {margin:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f4f4f8; display:flex; min-height:100vh;}
+        .sidebar {width:250px; background:#1a1a1a; color:white; display:flex; flex-direction:column; padding:20px; box-shadow:3px 0 12px rgba(0,0,0,0.3);}
+        .sidebar h2 {margin:0 0 30px 0; font-size:22px; color:#ff6600; text-align:center;}
+        .sidebar a {color:white; text-decoration:none; padding:12px 15px; border-radius:8px; margin-bottom:10px; display:block; transition:0.3s;}
+        .sidebar a:hover, .sidebar a.active {background:#ff6600; color:black;}
+        .main {flex:1; padding:30px;}
+        .main h1 {color:#ff6600; margin-bottom:20px;}
+        .cards {display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;}
+        .card {flex:1 1 200px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); text-align:center; transition:transform 0.3s;}
+        .card:hover {transform:translateY(-5px); box-shadow:0 8px 20px rgba(0,0,0,0.25);}
+        .card h3 {margin-bottom:10px; color:#ff6600;}
+        .table-filter {margin-bottom:20px;}
+        .table-filter button {padding:8px 16px; border:none; border-radius:6px; cursor:pointer; margin-right:10px; background:#ff6600; color:white; transition:0.3s;}
+        .table-filter button.active, .table-filter button:hover {background:#e65c00;}
+        table {width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+        table th, table td {padding:12px 15px; border-bottom:1px solid #ddd; text-align:left;}
+        table th {background:#ff6600; color:white;}
+        table tr:hover {background:#f9f9f9;}
+        .btn {padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:14px;}
+        .btn-complete {background:#4caf50; color:white;}
+        .btn-cancel {background:#f44336; color:white;}
+        .btn-view {background:#2196F3; color:white;}
+        .search-box {margin-bottom:20px;}
+        .search-box input {width:100%; padding:10px; border-radius:6px; border:1px solid #ccc;}
+    </style>
+</head>
+<body bgcolor="gold">
+<div class="sidebar">
+    <h2>Supplier Panel</h2>
+    <a href="supplier.html" class="active">My Orders</a>
+    <a href="supplier-menu.html">My Menu</a>
+    <a href="supplier-settings.html">Settings</a>
+</div>
+<div class="main">
+    <h1>My Orders</h1>
+
+    <div class="cards">
+        <div class="card">
+            <h3>Total Orders</h3>
+            <p id="totalOrders">0</p>
+        </div>
+        <div class="card">
+            <h3>Pending Orders</h3>
+            <p id="pendingOrders">0</p>
+        </div>
+        <div class="card">
+            <h3>Confirmed Orders</h3>
+            <p id="confirmedOrders">0</p>
+        </div>
+    </div>
+
+    <div class="table-filter">
+        <button class="active" onclick="filterStatus('all')">All Orders</button>
+        <button onclick="filterStatus('Pending')">Pending</button>
+        <button onclick="filterStatus('Confirmed')">Confirmed</button>
+        <button onclick="filterStatus('Cancelled')">Cancelled</button>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search orders by customer..." onkeyup="filterOrders()">
+    </div>
+
+    <table id="ordersTable">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Meal</th>
+                <th>Price (TZS)</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="6">Loading orders...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    let ordersData = [];
+    let currentStatus = 'all';
+
+    // IMPORTANT: In a real app, the username would come from a secure login session.
+    const supplierUsername = 'Amina_Kitchen'; // ⚠️ Change this to a real supplier username for testing
+
+    async function fetchOrders() {
+        try {
+            const res = await fetch(`http://localhost:5000/api/supplier/${supplierUsername}/orders`);
+            ordersData = await res.json();
+            renderOrders();
+        } catch (err) {
+            console.error('❌ Error fetching supplier orders:', err);
+            alert('Error fetching orders ❌');
+        }
+    }
+
+    function renderOrders() {
+        const tbody = document.querySelector('#ordersTable tbody');
+        tbody.innerHTML = '';
+        
+        const searchValue = document.getElementById('searchInput').value.toLowerCase();
+
+        const filteredOrders = ordersData.filter(o =>
+            (currentStatus === 'all' || o.status === currentStatus) &&
+            o.customer.toLowerCase().includes(searchValue)
+        );
+
+        filteredOrders.forEach(order => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${order.id}</td>
+                <td>${order.customer}</td>
+                <td>${order.meal}</td>
+                <td>TZS ${order.total_price.toLocaleString()}</td>
+                <td>${order.status}</td>
+                <td>
+                    <button class="btn btn-view">View</button>
+                    ${order.status === 'Pending' ? '<button class="btn btn-complete" onclick="updateStatus(\'' + order.id + '\', \'Confirmed\')">Complete</button>' : ''}
+                    ${order.status === 'Pending' ? '<button class="btn btn-cancel" onclick="updateStatus(\'' + order.id + '\', \'Cancelled\')">Cancel</button>' : ''}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const allUniqueOrders = [...new Map(ordersData.map(o => [o.id, o])).values()];
+        document.getElementById('totalOrders').textContent = allUniqueOrders.length;
+        document.getElementById('pendingOrders').textContent = allUniqueOrders.filter(o => o.status === 'Pending').length;
+        document.getElementById('confirmedOrders').textContent = allUniqueOrders.filter(o => o.status === 'Confirmed').length;
+    }
+
+    async function updateStatus(id, status) {
+        // You'll need to create this backend route to allow a supplier to update an order
+        // This is not yet implemented.
+        try {
+            await fetch(`http://localhost:5000/api/supplier/orders/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            alert(`Order status updated to ${status} ✅`);
+            fetchOrders();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update order ❌');
+        }
+    }
+
+    function filterStatus(status) {
+        currentStatus = status;
+        document.querySelectorAll('.table-filter button').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.table-filter button[onclick="filterStatus('${status}')"]`).classList.add('active');
+        renderOrders();
+    }
+
+    function filterOrders() {
+        renderOrders();
+    }
+
+    fetchOrders();
+</script>
+</body>
+</html>

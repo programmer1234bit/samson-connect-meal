@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samson Connect Meals | User Profile</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #fff8f0;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ff6600;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 3px solid gold;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 22px;
+            color: white;
+            text-decoration: none;
+        }
+
+        .logo img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: white;
+            padding: 5px;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        nav a {
+            text-decoration: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            background: black;
+            color: white;
+            font-weight: bold;
+            transition: 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        nav a:hover {
+            background: gold;
+            color: black;
+            transform: scale(1.05);
+        }
+
+        .user-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+            flex: 1;
+        }
+
+        h2 {
+            text-align: center;
+            color: #ff6600;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-shadow: 1px 1px 2px #ffa500;
+        }
+
+        .profile-card,
+        .change-password,
+        .orders-history {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        /* ----- Polished Profile Section Styles ----- */
+        .profile-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .profile-card h3 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .profile-pic-container {
+            margin-bottom: 20px;
+        }
+
+        .profile-pic-container img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #ff6600;
+        }
+
+        .profile-pic-container input {
+            margin-top: 15px;
+            font-size: 14px;
+            width: 90%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .profile-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .profile-fields .field-group {
+            text-align: left;
+        }
+
+        .profile-fields label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .profile-fields input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .profile-fields input:focus {
+            outline: none;
+            border-color: #ff6600;
+            box-shadow: 0 0 5px rgba(255, 102, 0, 0.4);
+        }
+
+        .profile-card button, .change-password button {
+            background: #ff6600;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            display: block;
+            width: 100%;
+            max-width: 250px;
+            margin: 0 auto;
+            font-size: 16px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .profile-card button:hover, .change-password button:hover {
+            background: #e65c00;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0,0,0,0.25);
+        }
+        /* ----- End of Polished Profile Section Styles ----- */
+
+        .change-password input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+        }
+
+        .orders-history table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .orders-history th,
+        .orders-history td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .orders-history th {
+            background: #ff6600;
+            color: white;
+        }
+
+        footer {
+            background: #ff6600;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            border-top: 3px solid gold;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .orders-history table,
+            .orders-history th,
+            .orders-history td {
+                font-size: 14px;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .profile-fields {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="menu.html" class="logo">
+            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/482fa995-d521-43f4-8e5d-5f35a035c657.png" alt="Logo">
+            Samson Connect Meals
+        </a>
+        <nav>
+            <a href="menu.html">Menu</a>
+            <a href="services.html">Services</a>
+            <a href="about.html">About Us</a>
+            <a href="contact.html">Contact</a>
+            <a href="cart.html">Cart 🛒</a>
+        </nav>
+    </header>
+
+    <div class="user-container">
+        <h2>Welcome, <span id="username">User</span> 👋</h2>
+
+        <div class="profile-card">
+            <h3>User Profile</h3>
+            
+            <div class="profile-pic-container">
+                <img src="https://via.placeholder.com/120" id="profile-pic" alt="Profile Picture">
+                <input type="text" id="profile-pic-input" placeholder="Paste image URL">
+            </div>
+
+            <div class="profile-fields">
+                <div class="field-group">
+                    <label for="first-name">First Name</label>
+                    <input type="text" id="first-name">
+                </div>
+
+                <div class="field-group">
+                    <label for="last-name">Last Name</label>
+                    <input type="text" id="last-name">
+                </div>
+
+                <div class="field-group">
+                    <label for="user-email">Email</label>
+                    <input type="email" id="user-email">
+                </div>
+
+                <div class="field-group">
+                    <label for="user-phone">Phone</label>
+                    <input type="text" id="user-phone">
+                </div>
+
+                <div class="field-group">
+                    <label for="username-input">Username</label>
+                    <input type="text" id="username-input" disabled>
+                </div>
+            </div>
+
+            <button onclick="editProfile()">Save Profile ✅</button>
+        </div>
+        <div class="change-password">
+            <h3>Change Password 🔑</h3>
+            <input type="password" id="old-password" placeholder="Current Password">
+            <input type="password" id="new-password" placeholder="New Password">
+            <input type="password" id="confirm-password" placeholder="Confirm Password">
+            <button onclick="updatePassword()">Update Password</button>
+        </div>
+
+        <div class="orders-history">
+            <h3>Your Order History 📝</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-list">
+                    <tr>
+                        <td colspan="5">Loading order history...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2025 Samson Connect Meals. All rights reserved. Contact: samsonprogrammer@gmail.com
+    </footer>
+
+    <script>
+        const usernameEl = document.getElementById('username');
+        const emailEl = document.getElementById('user-email');
+        const phoneEl = document.getElementById('user-phone');
+        const profilePicEl = document.getElementById('profile-pic');
+        const profilePicInputEl = document.getElementById('profile-pic-input');
+        const firstNameEl = document.getElementById('first-name');
+        const lastNameEl = document.getElementById('last-name');
+        const usernameInputEl = document.getElementById('username-input');
+        const ordersList = document.getElementById('orders-list');
+
+        // Get current user from localStorage
+        let currentUser = localStorage.getItem('username');
+        if (!currentUser) {
+            alert("No user logged in! Redirecting to login page.");
+            window.location.href = 'sign up.html';
+        }
+
+        // ---------------- FETCH USER INFO ----------------
+        async function fetchUser() {
+            try {
+                const res = await fetch(`http://localhost:5000/api/user/${currentUser}`);
+                const data = await res.json();
+                if (data.error) return alert(data.error);
+
+                // Fill display and inputs
+                usernameEl.textContent = data.username;
+                usernameInputEl.value = data.username;
+                emailEl.value = data.email || '';
+                phoneEl.value = data.phone || '';
+                firstNameEl.value = data.first_name || '';
+                lastNameEl.value = data.last_name || '';
+                
+                // ✅ Load profile pic from local storage if available, otherwise from the backend
+                const storedProfilePic = localStorage.getItem('profile_pic');
+                if (storedProfilePic) {
+                    profilePicEl.src = storedProfilePic;
+                    profilePicInputEl.value = storedProfilePic;
+                } else {
+                    profilePicEl.src = data.profile_pic || 'https://via.placeholder.com/120';
+                    profilePicInputEl.value = data.profile_pic || '';
+                }
+
+            } catch (err) {
+                console.error('Error fetching user info:', err);
+                alert('Error fetching user info ❌');
+            }
+        }
+
+        // ---------------- EDIT PROFILE ----------------
+        async function editProfile() {
+            const first_name = firstNameEl.value.trim();
+            const last_name = lastNameEl.value.trim();
+            const email = emailEl.value.trim();
+            const phone = phoneEl.value.trim();
+            const profile_pic = profilePicInputEl.value.trim();
+
+            if (!first_name || !last_name || !email || !phone) {
+                return alert("All fields are required! ⚡");
+            }
+
+            try {
+                const res = await fetch(`http://localhost:5000/api/user/${currentUser}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ first_name, last_name, email, phone, profile_pic })
+                });
+                const data = await res.json();
+                if (data.error) return alert(data.error);
+
+                alert(data.message);
+                
+                // ✅ Update localStorage for the new profile picture URL
+                localStorage.setItem('profile_pic', profile_pic);
+                
+                fetchUser(); // Refresh display
+            } catch (err) {
+                console.error('Error updating profile:', err);
+                alert('Error updating profile ❌');
+            }
+        }
+
+        // ---------------- CHANGE PASSWORD ----------------
+        async function updatePassword() {
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (newPassword !== confirmPassword) return alert("Passwords do not match!");
+
+            try {
+                const res = await fetch(`http://localhost:5000/api/user/${currentUser}/password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ oldPassword, newPassword })
+                });
+                const data = await res.json();
+                if (data.error) return alert(data.error);
+
+                alert(data.message);
+                document.getElementById('old-password').value = '';
+                document.getElementById('new-password').value = '';
+                document.getElementById('confirm-password').value = '';
+            } catch (err) {
+                console.error('Error updating password:', err);
+                alert('Error updating password ❌');
+            }
+        }
+
+        // ---------------- FETCH ORDER HISTORY ----------------
+        async function fetchOrderHistory() {
+            try {
+                const res = await fetch(`http://localhost:5000/api/user/${currentUser}/orders`);
+                const orders = await res.json();
+                console.log('Order History data:', orders); // Debugging
+                ordersList.innerHTML = '';
+                if (!orders || orders.length === 0) {
+                    ordersList.innerHTML = `
+                        <tr><td colspan="5">📝 You have no past orders.</td></tr>
+                    `;
+                    return;
+                }
+
+                orders.forEach(order => {
+                    const date = new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+                    ordersList.innerHTML += `
+                        <tr>
+                            <td>${order.id}</td>
+                            <td>${date}</td>
+                            <td>Tsh ${Number(order.total).toLocaleString()}</td>
+                            <td>${order.status}</td>
+                            <td>
+                                <a href="#" onclick="alert('Viewing details for Order #${order.id}')">View Details</a>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error('Error fetching order history:', err);
+                alert('Error fetching order history ❌');
+            }
+        }
+        
+        // ---------------- INITIALIZE ----------------
+        document.querySelector('.orders-history h3').textContent = 'Your Order History 📝';
+        
+        fetchUser();
+        fetchOrderHistory();
+    </script>
+</body>
+</html>

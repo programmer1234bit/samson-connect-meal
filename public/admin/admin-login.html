@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin-login</title>
+    <style>
+
+        body{
+         background-color: blue;
+        }
+
+        button{
+            color :gold;
+            border: 2px solid;
+           
+            background-color: black;
+            margin: 5px;
+            padding: 2px 52px  2px 52px;
+            border-radius: 10px;
+            font-size: medium;
+          
+        }
+        form{
+            text-align: center;
+             margin: 200px 500px 0px 500px;
+            background-color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 15px;
+           
+            
+           
+        } input{
+            border: transparent;
+            border-radius: 5px;
+            margin: 5px;
+            text-align: center;
+            font-size: medium;
+        } 
+        button{
+          
+        }
+        
+        /* responsive design  */
+        @media(width:900px){
+            form{
+                margin: 450px;
+                
+            }
+
+        }
+    </style>
+</head>
+<body>
+    <div>
+    <form action="">
+        <h2>WELCOME <br> BACK</h2>
+        Username:<br>
+     <input type="text" name="username" placeholder="Enter your username" autofocus="on" required> <br><br>
+      Password:<br>
+     <input type="password" name="password" placeholder="Enter your password" required><br>
+    <button onclick="document.location='admin.html'">login</button>
+
+    </form>
+    </div>
+</body>
+</html>

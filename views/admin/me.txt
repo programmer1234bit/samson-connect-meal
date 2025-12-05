@@ -1,0 +1,9 @@
+/admin-dashboard/
+│
+├── index.html          (Dashboard home / overview)
+├── users.html          (User Management)
+├── orders.html         (Orders)
+├── meals.html          (Meals Menu)
+├── analytics.html      (Analytics)
+├── settings.html       (Settings)
+└── style.css           (optional shared style, can keep internal if preferred)

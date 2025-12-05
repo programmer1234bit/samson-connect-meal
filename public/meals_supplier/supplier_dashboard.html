@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Route</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    .loading-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5em;
+      color: #555;
+    }
+    .info-box {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 90%;
+      font-size: 1em;
+    }
+    .info-box p {
+      margin: 0;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="info-box" id="infoBox">
+    <p>Loading directions...</p>
+  </div>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCSvZmGKlv9reCpsacvBhxhOrN7eMzOGCA&callback=initMap"></script>
+  <script>
+    function initMap() {
+      const infoBox = document.getElementById('infoBox');
+      const directionsService = new google.maps.DirectionsService();
+      const directionsRenderer = new google.maps.DirectionsRenderer();
+      const map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 12,
+        center: { lat: -6.7924, lng: 39.2083 }, // Center on Dar es Salaam
+      });
+      directionsRenderer.setMap(map);
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const origin = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            };
+            const destination = 'National Museum and House of Culture, Dar es Salaam, Tanzania';
+            
+            directionsService.route(
+              {
+                origin: origin,
+                destination: destination,
+                travelMode: google.maps.TravelMode.DRIVING
+              },
+              (response, status) => {
+                if (status === 'OK') {
+                  directionsRenderer.setDirections(response);
+                  const route = response.routes[0].legs[0];
+                  infoBox.innerHTML = `
+                    <p><strong>Origin:</strong> Your Current Location</p>
+                    <p><strong>Destination:</strong> National Museum and House of Culture</p>
+                    <p><strong>Distance:</strong> ${route.distance.text}</p>
+                    <p><strong>Duration:</strong> ${route.duration.text}</p>
+                  `;
+                } else {
+                  infoBox.innerHTML = '<p>Error: Could not find directions. Please ensure your location services are enabled.</p>';
+                  console.error('Directions request failed:', status);
+                }
+              }
+            );
+          },
+          () => {
+            infoBox.innerHTML = '<p>Error: Geolocation is not enabled or supported.</p>';
+            console.warn('Geolocation failed or denied.');
+          }
+        );
+      } else {
+        infoBox.innerHTML = '<p>Geolocation is not supported by your browser.</p>';
+      }
+    }
+  </script>
+</body>
+</html>b

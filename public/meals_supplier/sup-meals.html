@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>My Meals | Supplier — Samson Connect Meals</title>
+<style>
+  :root{--orange:#ff6600;--muted:#6b7280;--bg:#f4f4f8}
+  body{margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#111;min-height:100vh;display:flex}
+  .sidebar{width:240px;background:#111;color:#fff;padding:20px;box-shadow:3px 0 12px rgba(0,0,0,.25)}
+  .sidebar h2{color:var(--orange);margin:0 0 18px 0;text-align:center}
+  .sidebar a{color:#fff;text-decoration:none;padding:10px;border-radius:8px;display:block;margin-bottom:8px}
+  .sidebar a.active{background:var(--orange);color:#000}
+  .main{flex:1;padding:26px;overflow:auto}
+  h1{color:var(--orange);margin:0 0 18px 0}
+  .controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+  .controls input[type="search"]{padding:10px;border-radius:8px;border:1px solid #ddd;min-width:240px}
+  .controls select, .controls button{padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer}
+  .cards{display:flex;gap:12px;margin-bottom:18px}
+  .card{background:#fff;padding:16px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.06);flex:1;min-width:140px}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.06)}
+  th,td{padding:12px 14px;border-bottom:1px solid #eee;text-align:left}
+  th{background:var(--orange);color:#fff;position:sticky;top:0}
+  tr:hover td{background:#fafafa}
+  .status{padding:6px 8px;border-radius:6px;font-weight:700;font-size:0.85rem}
+  .status.available{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
+  .status.unavailable{background:#fff1f2;color:#7f1d1d;border:1px solid #fecaca}
+  .actions button{margin-right:6px;padding:8px 10px;border-radius:6px;border:none;cursor:pointer}
+  .actions .edit{background:#2563eb;color:#fff}
+  .actions .toggle{background:#f59e0b;color:#000}
+  .actions .remove{background:#ef4444;color:#fff}
+  /* Modal */
+  .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:1000;opacity:0;pointer-events:none;transition:opacity .15s}
+  .modal.open{opacity:1;pointer-events:auto}
+  .modal .panel{background:#fff;padding:18px;border-radius:10px;min-width:320px;max-width:520px;box-shadow:0 8px 30px rgba(0,0,0,0.25)}
+  .modal label{display:block;font-size:0.9rem;margin-top:8px}
+  .modal input, .modal textarea, .modal select{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;margin-top:6px;box-sizing:border-box}
+  .modal .row{display:flex;gap:8px}
+  .modal .row .col{flex:1}
+  .modal .buttons{margin-top:12px;display:flex;gap:8px;justify-content:flex-end}
+  .muted{color:var(--muted);font-size:0.95rem}
+  @media (max-width:720px){.sidebar{display:none}.main{padding:16px}}
+</style>
+</head>
+<body>
+
+<div class="sidebar" role="navigation" aria-label="Supplier menu">
+  <h2>Supplier</h2>
+  <a href="sup-dashboard.html">Dashboard</a>
+  <a href="sup-orders.html">Incoming Orders</a>
+  <a href="sup-meals.html" class="active">My Meals</a>
+  <a href="sup-stats.html">Analytics</a>
+  <a href="sup-profile.html">Profile</a>
+</div>
+
+<main class="main" id="main">
+  <h1>My Meals</h1>
+
+  <div class="controls" role="region" aria-label="Controls">
+    <input id="search" type="search" placeholder="Search meal name or description..." aria-label="Search meals">
+    <select id="availabilityFilter" aria-label="Filter by availability">
+      <option value="all">All availability</option>
+      <option value="available">Available</option>
+      <option value="unavailable">Unavailable</option>
+    </select>
+    <select id="categoryFilter" aria-label="Filter by category">
+      <option value="all">All categories</option>
+      <option value="street">Street</option>
+      <option value="restaurant">Restaurant</option>
+      <option value="beverages">Beverages</option>
+    </select>
+    <button id="addMealBtn" aria-label="Add meal" style="background:var(--orange);color:#fff;border:none;border-radius:8px;padding:10px">+ Add Meal</button>
+    <div style="margin-left:auto" class="muted">Tips: click Complete/Unavailable to toggle status</div>
+  </div>
+
+  <div class="cards" aria-hidden="true">
+    <div class="card"><div class="muted">Total Meals</div><div id="mealsCount">0</div></div>
+    <div class="card"><div class="muted">Available</div><div id="mealsAvailable">0</div></div>
+    <div class="card"><div class="muted">Unavailable</div><div id="mealsUnavailable">0</div></div>
+  </div>
+
+  <table id="mealsTable" aria-label="Meals list">
+    <thead>
+      <tr>
+        <th>Id</th>
+        <th>Meal</th>
+        <th>Category</th>
+        <th>Price</th>
+        <th>Availability</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- rows populated by JS -->
+    </tbody>
+  </table>
+
+  <div id="empty" class="muted" style="text-align:center;margin-top:18px;display:none">
+    No meals yet. Add your first meal.
+  </div>
+</main>
+
+<!-- Modal -->
+<div id="mealModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="panel" role="document">
+    <h3 id="modalTitle">Add Meal</h3>
+    <label>Meal name<input id="m_name" required></label>
+    <label>Description<textarea id="m_desc" rows="3"></textarea></label>
+    <div class="row">
+      <div class="col">
+        <label>Price (TZS)<input id="m_price" type="number" min="0" required></label>
+      </div>
+      <div class="col">
+        <label>Category
+          <select id="m_cat">
+            <option value="street">Street</option>
+            <option value="restaurant">Restaurant</option>
+            <option value="beverages">Beverages</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <label>
+      Availability
+      <select id="m_status">
+        <option value="available">Available</option>
+        <option value="unavailable">Unavailable</option>
+      </select>
+    </label>
+
+    <div class="buttons">
+      <button id="cancelBtn" class="btn">Cancel</button>
+      <button id="saveBtn" class="btn" style="background:var(--orange);color:#fff">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const API_BASE = '/api/sup/meals'; // supplier-namespaced meals API (backend should implement)
+  let meals = []; // in-memory list
+  let editingId = null;
+
+  // Elements
+  const tbody = document.querySelector('#mealsTable tbody');
+  const search = document.getElementById('search');
+  const availabilityFilter = document.getElementById('availabilityFilter');
+  const categoryFilter = document.getElementById('categoryFilter');
+  const addMealBtn = document.getElementById('addMealBtn');
+  const empty = document.getElementById('empty');
+
+  const modal = document.getElementById('mealModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const m_name = document.getElementById('m_name');
+  const m_desc = document.getElementById('m_desc');
+  const m_price = document.getElementById('m_price');
+  const m_cat = document.getElementById('m_cat');
+  const m_status = document.getElementById('m_status');
+  const saveBtn = document.getElementById('saveBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+
+  // Fetch meals from supplier API (real data)
+  async function fetchMeals(){
+    try {
+      const res = await fetch(API_BASE);
+      if (!res.ok) throw new Error('Network');
+      const data = await res.json();
+      meals = Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.warn('Failed to fetch meals API, using sample data', err);
+      meals = [
+        { id: 101, name:'Ugali & Fish', description:'Home-cooked', price:8000, category:'restaurant', status:'available' },
+        { id: 102, name:'Chicken Rice', description:'Spiced', price:7000, category:'street', status:'available' },
+        { id: 103, name:'Fried Chips', description:'Street snack', price:3000, category:'street', status:'unavailable' }
+      ];
+    }
+    render();
+  }
+
+  // Render table rows based on filters
+  function render(){
+    const q = (search.value || '').trim().toLowerCase();
+    const avail = availabilityFilter.value;
+    const cat = categoryFilter.value;
+    const filtered = meals.filter(m=>{
+      if (avail !== 'all' && (String(m.status||'available').toLowerCase() !== avail)) return false;
+      if (cat !== 'all' && (String(m.category||'').toLowerCase() !== cat)) return false;
+      if (!q) return true;
+      return (m.name||'').toLowerCase().includes(q) || (m.description||'').toLowerCase().includes(q);
+    });
+
+    tbody.innerHTML = '';
+    if (!filtered.length) {
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+    }
+
+    filtered.forEach(m=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${m.id}</td>
+        <td><strong>${escapeHtml(m.name)}</strong><div class="muted">${escapeHtml(m.description||'')}</div></td>
+        <td>${escapeHtml(m.category||'')}</td>
+        <td>TZS ${Number(m.price||0).toLocaleString()}</td>
+        <td>${m.status === 'available' ? '<span class="status available">Available</span>' : '<span class="status unavailable">Unavailable</span>'}</td>
+        <td class="actions">
+          <button class="edit" data-id="${m.id}">Edit</button>
+          <button class="toggle" data-id="${m.id}">${m.status === 'available' ? 'Mark Unavailable' : 'Mark Available'}</button>
+          <button class="remove" data-id="${m.id}">Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // update summary cards
+    document.getElementById('mealsCount').textContent = meals.length;
+    document.getElementById('mealsAvailable').textContent = meals.filter(x=>String(x.status||'available').toLowerCase()==='available').length;
+    document.getElementById('mealsUnavailable').textContent = meals.filter(x=>String(x.status||'available').toLowerCase()==='unavailable').length;
+
+    // wire action buttons
+    tbody.querySelectorAll('button.edit').forEach(b=>b.addEventListener('click', e=>{
+      const id = b.getAttribute('data-id');
+      openEdit(id);
+    }));
+    tbody.querySelectorAll('button.toggle').forEach(b=>b.addEventListener('click', async e=>{
+      const id = b.getAttribute('data-id');
+      await toggleAvailability(id);
+    }));
+    tbody.querySelectorAll('button.remove').forEach(b=>b.addEventListener('click', async e=>{
+      const id = b.getAttribute('data-id');
+      if (!confirm('Delete this meal?')) return;
+      await deleteMeal(id);
+    }));
+  }
+
+  // Modal helpers
+  function openAdd(){
+    editingId = null;
+    modalTitle.textContent = 'Add Meal';
+    m_name.value = ''; m_desc.value=''; m_price.value=''; m_cat.value='street'; m_status.value='available';
+    openModal();
+  }
+  function openEdit(id){
+    const m = meals.find(x=>String(x.id) === String(id));
+    if(!m) return alert('Meal not found');
+    editingId = m.id;
+    modalTitle.textContent = 'Edit Meal';
+    m_name.value = m.name || '';
+    m_desc.value = m.description || '';
+    m_price.value = m.price || '';
+    m_cat.value = m.category || 'street';
+    m_status.value = m.status === 'available' ? 'available' : 'unavailable';
+    openModal();
+  }
+  function openModal(){ modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); m_name.focus(); }
+  function closeModal(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+
+  // Save (create or update)
+  async function saveMeal(){
+    const payload = {
+      name: m_name.value.trim(),
+      description: m_desc.value.trim(),
+      price: Number(m_price.value) || 0,
+      category: m_cat.value,
+      status: m_status.value
+    };
+    if (!payload.name) return alert('Name required');
+
+    try {
+      if (editingId) {
+        // update
+        const res = await fetch(`${API_BASE}/${editingId}`, {
+          method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('update failed');
+        const updated = await res.json();
+        // optimistic local update
+        meals = meals.map(m => m.id === editingId ? Object.assign({}, m, payload, {id: m.id}) : m);
+      } else {
+        // create
+        const res = await fetch(API_BASE, {
+          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('create failed');
+        const created = await res.json();
+        // if backend returns created record, push it; else synthesize id
+        if (created && created.id) meals.unshift(created);
+        else meals.unshift(Object.assign({ id: Date.now() }, payload));
+      }
+      closeModal();
+      render();
+    } catch (err) {
+      console.error('Save meal error', err);
+      alert('Failed to save meal. Check server/API.');
+    }
+  }
+
+  // Toggle availability
+  async function toggleAvailability(id){
+    const m = meals.find(x=>String(x.id) === String(id));
+    if(!m) return;
+    const newStatus = (String(m.status||'available').toLowerCase() === 'available') ? 'unavailable' : 'available';
+    try {
+      const res = await fetch(`${API_BASE}/${id}`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: newStatus })
+      });
+      if (!res.ok) throw new Error('toggle failed');
+      // update local
+      m.status = newStatus;
+      render();
+    } catch (err) {
+      console.error('Toggle error', err);
+      alert('Failed to toggle availability.');
+    }
+  }
+
+  // Delete meal
+  async function deleteMeal(id){
+    try {
+      const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete failed');
+      meals = meals.filter(x=>String(x.id) !== String(id));
+      render();
+    } catch (err) {
+      console.error('Delete error', err);
+      alert('Failed to delete meal.');
+    }
+  }
+
+  // Utilities
+  function escapeHtml(s){ const d=document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  // Wire controls
+  addMealBtn.addEventListener('click', openAdd);
+  search.addEventListener('input', () => render());
+  availabilityFilter.addEventListener('change', () => render());
+  categoryFilter.addEventListener('change', () => render());
+  cancelBtn.addEventListener('click', closeModal);
+  saveBtn.addEventListener('click', saveMeal);
+
+  // initial load
+  fetchMeals();
+
+  // Expose viewOrder for consistency with other pages (optional)
+  window.viewOrder = function(id){
+    alert('Open order details for meal id ' + id + ' (implement as needed).');
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incoming Orders | Supplier — Samson Connect Meals</title>
+    <style>
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f4f4f8; 
+            display: flex; 
+            min-height: 100vh; 
+        }
+        .sidebar { 
+            width: 250px; 
+            background: #1a1a1a; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 20px; 
+            box-shadow: 3px 0 12px rgba(0,0,0,0.3); 
+        }
+        .sidebar h2 { 
+            margin: 0 0 30px 0; 
+            font-size: 22px; 
+            color: #ff6600; 
+            text-align: center; 
+        }
+        .sidebar a { 
+            color: white; 
+            text-decoration: none; 
+            padding: 12px 15px; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+            display: block; 
+            transition: 0.3s; 
+        }
+        .sidebar a:hover, .sidebar a.active { 
+            background: #ff6600; 
+            color: black; 
+        }
+        .main { 
+            flex: 1; 
+            padding: 30px; 
+            overflow-x: auto; /* For table on mobile */
+        }
+        .main h1 { 
+            color: #ff6600; 
+            margin-bottom: 20px; 
+        }
+        .cards { 
+            display: flex; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+            margin-bottom: 20px; 
+        }
+        .card { 
+            flex: 1 1 200px; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            text-align: center; 
+            transition: transform 0.3s; 
+        }
+        .card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25); 
+        }
+        .card h3 { 
+            margin-bottom: 10px; 
+            color: #ff6600; 
+            font-size: 0.9rem; 
+        }
+        .card p { 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            margin: 0; 
+            color: #333; 
+        }
+        .table-filter { 
+            margin-bottom: 20px; 
+            display: flex; 
+            gap: 10px; 
+            flex-wrap: wrap; 
+        }
+        .table-filter button { 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            background: #ff6600; 
+            color: white; 
+            transition: 0.3s; 
+            font-size: 0.9rem; 
+        }
+        .table-filter button.active, .table-filter button:hover { 
+            background: #e65c00; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            background: white; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); 
+            min-width: 600px; /* Prevent too-narrow on mobile */
+        }
+        table th, table td { 
+            padding: 12px 15px; 
+            border-bottom: 1px solid #ddd; 
+            text-align: left; 
+        }
+        table th { 
+            background: #ff6600; 
+            color: white; 
+            position: sticky; top: 0; 
+        }
+        table tr:hover { 
+            background: #f9f9f9; 
+        }
+        /* Status Badge Styling */
+        .status-badge { 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+        }
+        .status-pending { 
+            background: #fff3cd; 
+            color: #856404; 
+            border: 1px solid #ffeaa7; 
+        }
+        .status-completed { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        .status-cancelled { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        .btn { 
+            padding: 6px 12px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            margin-right: 5px; 
+            margin-bottom: 2px; 
+            transition: 0.3s; 
+        }
+        .btn:hover { 
+            opacity: 0.8; 
+        }
+        .btn-view { 
+            background: #2196F3; 
+            color: white; 
+        }
+        .btn-complete { 
+            background: #4caf50; 
+            color: white; 
+        }
+        .btn-cancel { 
+            background: #f44336; 
+            color: white; 
+        }
+        .search-box { 
+            margin-bottom: 20px; 
+        }
+        .search-box input { 
+            width: 100%; 
+            padding: 10px; 
+            border-radius: 6px; 
+            border: 1px solid #ccc; 
+            max-width: 300px; 
+            font-size: 1rem; 
+        }
+        /* Empty State */
+        #emptyState { 
+            display: none; 
+            text-align: center; 
+            padding: 40px 20px; 
+            color: #666; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            margin-top: 20px; 
+        }
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .sidebar { width: 200px; }
+            .main { padding: 20px; }
+            .cards { flex-direction: column; gap: 10px; }
+            .table-filter { justify-content: center; }
+            .search-box input { max-width: 100%; }
+            table { font-size: 0.85rem; min-width: 100%; }
+            table th, table td { padding: 8px 6px; }
+            .main { overflow-x: auto; }
+        }
+
+        /* modal styles */
+        #mapModal {
+          position: fixed;
+          inset: 0;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0,0,0,0.6);
+          z-index: 2000;
+        }
+        #mapModal.open { display:flex; }
+        #mapModal .modal-content {
+          width: 95%;
+          max-width: 900px;
+          background: #fff;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        }
+        #mapModal .modal-header {
+          display:flex; justify-content:space-between; align-items:center;
+          padding:12px 16px; background:#ff6600; color:#fff;
+        }
+        #mapModal .modal-body { padding:0; }
+        #orderMap { width:100%; height:420px; }
+        #mapInfo { padding:12px 16px; font-size:0.95rem; color:#333; }
+        #mapModal .close-btn {
+          background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;
+        }
+        .delivery-marker {
+          display:block;
+          width:18px;
+          height:18px;
+          border-radius:50%;
+          background:#ff3b30;
+          border:2px solid #fff;
+          box-shadow:0 2px 6px rgba(0,0,0,0.25);
+        }
+    </style>
+	<script src="/theme.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <div class="sidebar" role="navigation" aria-label="Supplier menu">
+    <h2>Admin Panel</h2>
+    <a href="admin.html">Dashboard</a>
+    <a href="users.html">User Management</a>
+    <a href="orders.html" class="active">Orders</a>
+    <a href="meals.html">Meals Menu</a>
+    <a href="analytics.html">Analytics</a>
+    <a href="settings.html">Settings</a>
+	<a href="messages.html">Messages</a>
+</div>
+
+    <div class="main">
+        <h1>Incoming Orders</h1>
+
+        <!-- Dashboard Cards -->
+        <div class="cards">
+            <div class="card">
+                <h3>Total Orders</h3>
+                <p id="totalOrders">0</p>
+            </div>
+            <div class="card">
+                <h3>Total Revenue</h3>
+                <p id="totalRevenue">TZS 0</p>
+            </div>
+            <div class="card">
+                <h3>Pending Orders</h3>
+                <p id="pendingOrders">0</p>
+            </div>
+            <div class="card">
+                <h3>Completed Orders</h3>
+                <p id="completedOrders">0</p>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="table-filter">
+            <button class="active" onclick="filterStatus('all')" aria-label="Show all orders">All Orders</button>
+            <button onclick="filterStatus('Pending')" aria-label="Show pending orders">Pending</button>
+            <button onclick="filterStatus('Completed')" aria-label="Show completed orders">Completed</button>
+            <button onclick="filterStatus('Cancelled')" aria-label="Show cancelled orders">Cancelled</button>
+        </div>
+
+        <!-- Search -->
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search orders by customer or meal..." onkeyup="filterOrders()" aria-label="Search orders">
+        </div>
+
+        <!-- Orders Table -->
+        <table id="ordersTable" role="table" aria-label="Orders table">
+            <thead>
+                <tr>
+                    <th scope="col">Order ID</th>
+                    <th scope="col">Customer</th>
+                    <th scope="col">Meal</th>
+                    <th scope="col">Price (TZS)</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody role="rowgroup">
+                <!-- Orders will be injected here -->
+            </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div id="emptyState">
+            <h3>No orders found</h3>
+            <p>Pending orders will appear here. Try adjusting your search or filters.</p>
+        </div>
+    </div>
+
+    <!-- Map Modal -->
+    <div id="mapModal" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
+      <div class="modal-content" role="document">
+        <div class="modal-header">
+          <div id="mapModalTitle">Order Location</div>
+          <button class="close-btn" aria-label="Close map" onclick="closeMapModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="orderMap" aria-label="Order map"></div>
+          <div id="mapInfo"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+	// Restored working script: client-side filtering + mapping + tracking
+
+	let ordersData = [];
+	let currentStatus = 'all';
+	let orderMap = null;
+	let orderMapMarkers = [];
+	let deliveryMarker = null;
+	let trackingTimer = null;
+	let deliveryAnimationFrame = null;
+	let googleMapsLoaded = false;
+
+	function escapeHtml(text) {
+		const div = document.createElement('div');
+		div.textContent = text;
+		return div.innerHTML;
+	}
+
+	function getStatusBadge(status) {
+		const cls = String(status || 'Pending').toLowerCase();
+		let badgeClass = 'status-pending';
+		if (cls.includes('completed') || cls.includes('confirmed')) badgeClass = 'status-completed';
+		else if (cls.includes('cancelled') || cls.includes('canceled')) badgeClass = 'status-cancelled';
+		return `<span class="status-badge ${badgeClass}">${escapeHtml(String(status))}</span>`;
+	}
+
+	// Fetch all orders (unfiltered) from supplier API
+	async function fetchOrders() {
+		try {
+			const res = await fetch('/api/sup/orders');
+			if (!res.ok) throw new Error('API response not OK');
+			ordersData = await res.json();
+			console.log('✅ Fetched orders:', ordersData);
+		} catch (err) {
+			console.warn('⚠️ supplier API failed, using fallback sample data:', err);
+			ordersData = [
+				{ id: 1, customer: 'Asha M.', meal: 'Ugali & Fish', total_price: 12000, status: 'Pending' },
+				{ id: 2, customer: 'John K.', meal: 'Chicken Rice', total_price: 9000, status: 'Completed' },
+				{ id: 3, customer: 'Sara L.', meal: 'Fried Chips', total_price: 4500, status: 'Cancelled' }
+			];
+		}
+		renderOrders();
+	}
+
+	// status comparison (case-insensitive)
+	function statusEquals(a, b) {
+		if (!a || !b) return false;
+		return String(a).toLowerCase() === String(b).toLowerCase();
+	}
+
+	// Main renderer: applies currentStatus and searchValue locally
+	function renderOrders() {
+		const tbody = document.querySelector('#ordersTable tbody');
+		const emptyState = document.getElementById('emptyState');
+		tbody.innerHTML = '';
+
+		const searchValue = (document.getElementById('searchInput').value || '').toLowerCase();
+
+		const filtered = ordersData.filter(o => {
+			const statMatch = (currentStatus === 'all') || statusEquals(o.status, currentStatus);
+			const cust = String(o.customer || '').toLowerCase();
+			const meal = (o.meal || (o.items && o.items[0] && o.items[0].name) || '').toLowerCase();
+			const searchMatch = !searchValue || cust.includes(searchValue) || meal.includes(searchValue);
+			return statMatch && searchMatch;
+		});
+
+		if (filtered.length === 0) {
+			emptyState.style.display = 'block';
+			return;
+		}
+		emptyState.style.display = 'none';
+
+		filtered.forEach(order => {
+			const tr = document.createElement('tr');
+			tr.innerHTML = `
+				<td>${order.id}</td>
+				<td>${escapeHtml(order.customer || 'N/A')}</td>
+				<td>${escapeHtml(order.meal || (order.items && order.items[0] && order.items[0].name) || 'N/A')}</td>
+				<td>TZS ${Number(order.total_price || order.total || 0).toLocaleString()}</td>
+				<td>${getStatusBadge(order.status)}</td>
+				<td>
+					<button class="btn btn-view" onclick="viewOrder(${order.id})">View</button>
+					${statusEquals(order.status,'Pending') ? `<button class="btn btn-complete" onclick="updateStatus(${order.id}, 'Completed')">Complete</button>` : ''}
+					${statusEquals(order.status,'Pending') ? `<button class="btn btn-cancel" onclick="updateStatus(${order.id}, 'Cancelled')">Cancel</button>` : ''}
+				</td>
+			`;
+			tbody.appendChild(tr);
+		});
+
+		// update cards
+		const unique = [...new Map(ordersData.map(o => [o.id, o])).values()];
+		document.getElementById('totalOrders').textContent = unique.length;
+		const revenue = unique.reduce((s,o) => s + Number(o.total_price || o.total || 0), 0);
+		document.getElementById('totalRevenue').textContent = 'TZS ' + revenue.toLocaleString();
+		document.getElementById('pendingOrders').textContent = unique.filter(o => statusEquals(o.status,'Pending')).length;
+		document.getElementById('completedOrders').textContent = unique.filter(o => statusEquals(o.status,'Completed')).length;
+	}
+
+	// Update order status (PUT)
+	async function updateStatus(id, status) {
+		try {
+			const res = await fetch(`/api/sup/orders/${id}/status`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ status })
+			});
+			if (!res.ok) throw new Error('Update failed');
+			await fetchOrders();
+		} catch (e) {
+			console.error('Update error', e);
+			alert('Failed to update order');
+		}
+	}
+
+	// Simple filter control
+	function filterStatus(status) {
+		currentStatus = status;
+		document.querySelectorAll('.table-filter button').forEach(b => b.classList.remove('active'));
+		const selector = status === 'all' ? '.table-filter button:first-child' : `.table-filter button[onclick="filterStatus('${status}')"]`;
+		let btn = document.querySelector(selector);
+		if (!btn) btn = Array.from(document.querySelectorAll('.table-filter button')).find(b => b.textContent.trim().toLowerCase() === String(status).toLowerCase());
+		if (btn) btn.classList.add('active');
+		renderOrders();
+	}
+
+	// Live search wrapper
+	function filterOrders() {
+		renderOrders();
+	}
+
+	// Maps: load google scripts (optional) and Leaflet fallback
+	function loadGoogleMapsApi() {
+		if (googleMapsLoaded && window.google && window.google.maps) return Promise.resolve(window.google.maps);
+		if (window.__gmapsLoaderPromise) return window.__gmapsLoaderPromise;
+		window.__gmapsLoaderPromise = fetch('/api/config/maps-key')
+			.then(r => { if (!r.ok) throw new Error('no maps key'); return r.json(); })
+			.then(data => {
+				if (!data || !data.key) throw new Error('no maps key returned');
+				return new Promise((resolve, reject) => {
+					const cb = '__onGmapsLoaded';
+					window[cb] = () => { googleMapsLoaded = true; resolve(window.google.maps); try { delete window[cb]; } catch{} };
+					const s = document.createElement('script');
+					s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(data.key)}&callback=${cb}`;
+					s.async = true; s.defer = true;
+					s.onerror = () => reject(new Error('Google Maps failed to load'));
+					document.head.appendChild(s);
+				});
+			});
+		return window.__gmapsLoaderPromise;
+	}
+
+	function extractCoords(obj) {
+		if (!obj) return null;
+		if (typeof obj === 'string') {
+			try { obj = JSON.parse(obj); } catch (e) { return null; }
+		}
+		if (obj && (obj.lat || obj.latitude) && (obj.lng || obj.longitude)) {
+			return { lat: Number(obj.lat ?? obj.latitude), lng: Number(obj.lng ?? obj.longitude) };
+		}
+		return null;
+	}
+
+	function renderGoogleMap(supplierCoords, customerCoords) {
+		const container = document.getElementById('orderMap');
+		container.innerHTML = '';
+		orderMapMarkers = [];
+		orderMap = new google.maps.Map(container, { center: customerCoords || supplierCoords, zoom: 14 });
+		const supMarker = new google.maps.Marker({ position: supplierCoords, map: orderMap, title: 'Supplier' });
+		orderMapMarkers.push(supMarker);
+		if (customerCoords) {
+			const custMarker = new google.maps.Marker({ position: customerCoords, map: orderMap, title: 'Customer' });
+			orderMapMarkers.push(custMarker);
+			const bounds = new google.maps.LatLngBounds();
+			bounds.extend(supplierCoords); bounds.extend(customerCoords);
+			orderMap.fitBounds(bounds);
+		}
+	}
+
+	function renderLeafletMap(supplierCoords, customerCoords) {
+		const container = document.getElementById('orderMap');
+		container.innerHTML = '';
+		orderMap = L.map('orderMap', { zoomControl: true, attributionControl: false });
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(orderMap);
+		const supM = L.marker([supplierCoords.lat, supplierCoords.lng]).addTo(orderMap);
+		orderMapMarkers.push(supM);
+		if (customerCoords) {
+			const custM = L.marker([customerCoords.lat, customerCoords.lng]).addTo(orderMap);
+			orderMapMarkers.push(custM);
+			const bounds = L.latLngBounds([[supplierCoords.lat,supplierCoords.lng],[customerCoords.lat,customerCoords.lng]]);
+			orderMap.fitBounds(bounds.pad(0.2));
+		} else {
+			orderMap.setView([supplierCoords.lat, supplierCoords.lng], 14);
+		}
+	}
+
+	// view order map modal and start tracking
+	async function viewOrder(id) {
+		const order = ordersData.find(o => String(o.id) === String(id) || String(o.cart_id) === String(id) || String(o.id) === `cart-${id}`);
+		if (!order) { alert('Order not found'); return; }
+		const modal = document.getElementById('mapModal');
+		const info = document.getElementById('mapInfo');
+
+		const custCoords = extractCoords(order.user_coords ?? order.userCoords ?? { lat: order.delivery_lat, lng: order.delivery_lng }) || null;
+		let supplierCoords = null;
+		if (order.supplier_lat && order.supplier_lng) supplierCoords = { lat: Number(order.supplier_lat), lng: Number(order.supplier_lng) };
+		// fallback
+		if (!supplierCoords) supplierCoords = { lat: -6.7924, lng: 39.2083 };
+
+		info.innerHTML = `<strong>Order:</strong> ${escapeHtml(String(order.id))} <br><strong>Customer:</strong> ${escapeHtml(order.customer || order.username || 'N/A')}`;
+
+		modal.classList.add('open');
+		document.body.style.overflow = 'hidden';
+
+		try {
+			await loadGoogleMapsApi();
+			if (window.google && window.google.maps) renderGoogleMap(supplierCoords, custCoords);
+			else renderLeafletMap(supplierCoords, custCoords);
+		} catch (e) {
+			// fallback to Leaflet if Google fails
+			if (typeof L !== 'undefined') renderLeafletMap(supplierCoords, custCoords);
+			else document.getElementById('orderMap').innerHTML = '<div style="padding:20px;color:#c00">Map unavailable</div>';
+		}
+
+		// start polling for deliverer location
+		startTracking(order.id);
+	}
+
+	document.getElementById('mapModal').addEventListener('click', e => {
+		if (e.target && e.target.id === 'mapModal') closeMapModal();
+	});
+
+	function closeMapModal() {
+		const modal = document.getElementById('mapModal');
+		modal.classList.remove('open');
+		stopTracking();
+		if (orderMap) {
+			try { if (orderMap.remove) orderMap.remove(); else orderMap = null; } catch(e){}
+			document.getElementById('orderMap').innerHTML = '';
+			orderMap = null;
+		}
+		document.body.style.overflow = '';
+	}
+
+	// tracking: poll order and update delivery marker
+	async function pollOrderForDriver(orderId) {
+		try {
+			const order = await fetchOrderById(orderId);
+			if (!order) return;
+			// driver fields
+			const candidates = [
+				order.driver_coords, order.driverCoords,
+				(order.driver_lat && order.driver_lng) ? { lat: order.driver_lat, lng: order.driver_lng } : null,
+				(order.delivery_lat && order.delivery_lng) ? { lat: order.delivery_lat, lng: order.delivery_lng } : null
+			];
+			let driver = null;
+			for (const c of candidates) {
+				const p = extractCoords(c ? { user_coords: c } : null);
+				if (p) { driver = p; break; }
+			}
+			updateDeliveryMarkerSmooth(driver);
+		} catch (e) { console.warn(e); }
+	}
+
+	function startTracking(orderId, intervalMs = 5000) {
+		stopTracking();
+		pollOrderForDriver(orderId);
+		trackingTimer = setInterval(() => pollOrderForDriver(orderId), intervalMs);
+	}
+
+	function stopTracking() {
+		if (trackingTimer) { clearInterval(trackingTimer); trackingTimer = null; }
+		if (deliveryAnimationFrame) { cancelAnimationFrame(deliveryAnimationFrame); deliveryAnimationFrame = null; }
+		if (deliveryMarker) {
+			try { if (deliveryMarker.setMap) deliveryMarker.setMap(null); else deliveryMarker.remove(); } catch(e){}
+			deliveryMarker = null;
+		}
+	}
+
+	function updateDeliveryMarkerSmooth(coords) {
+		if (!coords) { if (deliveryMarker) { try { if (deliveryMarker.setMap) deliveryMarker.setMap(null); else deliveryMarker.remove(); } catch(e){} deliveryMarker=null; } return; }
+		// Google
+		if (window.google && window.google.maps && orderMap && orderMap instanceof google.maps.Map) {
+			const pos = new google.maps.LatLng(coords.lat, coords.lng);
+			if (!deliveryMarker) deliveryMarker = new google.maps.Marker({ position: pos, map: orderMap, title: 'Deliverer', icon:{ path: google.maps.SymbolPath.CIRCLE, scale:7, fillColor:'#ff3b30', fillOpacity:1, strokeWeight:1 } });
+			else {
+				// simple interpolation
+				const start = deliveryMarker.getPosition(); const sLat = start.lat(), sLng = start.lng();
+				const eLat = coords.lat, eLng = coords.lng; const steps=6; let i=0;
+				if (deliveryAnimationFrame) cancelAnimationFrame(deliveryAnimationFrame);
+				(function step(){ i++; const t=i/steps; deliveryMarker.setPosition(new google.maps.LatLng(sLat + (eLat-sLat)*t, sLng + (eLng-sLng)*t)); if (i<steps) deliveryAnimationFrame = requestAnimationFrame(step); })();
+			}
+			return;
+		}
+		// Leaflet
+		if (typeof L !== 'undefined' && orderMap && orderMap.remove === undefined === false) {
+			const latlng = [coords.lat, coords.lng];
+			if (!deliveryMarker) deliveryMarker = L.marker(latlng, { icon: L.divIcon({ className:'delivery-marker' }) }).addTo(orderMap);
+			else {
+				const from = deliveryMarker.getLatLng(); const to = L.latLng(coords.lat, coords.lng); const frames=8; let f=0;
+				if (deliveryAnimationFrame) cancelAnimationFrame(deliveryAnimationFrame);
+				(function animate(){ f++; deliveryMarker.setLatLng([from.lat + (to.lat-from.lat)*(f/frames), from.lng + (to.lng-from.lng)*(f/frames)]); if (f<frames) deliveryAnimationFrame = requestAnimationFrame(animate); })();
+			}
+		}
+	}
+
+	// lightweight helper: try single-order endpoint then list
+	async function fetchOrderById(orderId) {
+		try {
+			const r = await fetch(`/api/sup/orders/${encodeURIComponent(orderId)}`);
+			if (r.ok) { const d = await r.json(); return d; }
+		} catch (e){}
+		try { const r2 = await fetch('/api/sup/orders'); if (!r2.ok) return null; const list = await r2.json(); return list.find(o => String(o.id) === String(orderId) || String(o.id)===`cart-${orderId}`) || null; } catch(e){ return null; }
+	}
+
+	// DOM wiring
+	document.addEventListener('DOMContentLoaded', () => {
+		document.getElementById('searchInput')?.addEventListener('input', filterOrders);
+		document.querySelectorAll('.table-filter button').forEach(btn => btn.addEventListener('click', () => { const match = (btn.getAttribute('onclick')||'').match(/filterStatus\('([^']+)'\)/); filterStatus(match? match[1] : btn.textContent.trim()); }));
+		fetchOrders();
+	});
+    </script>
+</body>
+</html>

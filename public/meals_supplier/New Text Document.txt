@@ -1,0 +1,7 @@
+public/
+ ├── supplier/
+ │    ├── sup-dashboard.html       ← Main dashboard home
+ │    ├── sup-orders.html          ← Incoming orders list
+ │    ├── sup-meals.html           ← Supplier meals list (view only)
+ │    ├── sup-profile.html         ← Supplier profile
+ │    └── sup-stats.html           ← Earnings / analytics

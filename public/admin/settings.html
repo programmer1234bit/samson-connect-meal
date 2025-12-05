@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings | Samson Connect Meals</title>
+<style>
+body {margin:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f4f4f8; display:flex; min-height:100vh;}
+.sidebar {width:250px; background:#1a1a1a; color:white; display:flex; flex-direction:column; padding:20px; box-shadow:3px 0 12px rgba(0,0,0,0.3);}
+.sidebar h2 {margin:0 0 30px 0; font-size:22px; color:#ff6600; text-align:center;}
+.sidebar a {color:white; text-decoration:none; padding:12px 15px; border-radius:8px; margin-bottom:10px; display:block; transition:0.3s;}
+.sidebar a:hover, .sidebar a.active {background:#ff6600; color:black;}
+.main {flex:1; padding:30px;}
+.main h1 {color:#ff6600; margin-bottom:20px;}
+.settings-section {background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-bottom:20px;}
+.settings-section h2 {margin-top:0; color:#ff6600;}
+.settings-section label {display:block; margin:10px 0 5px;}
+.settings-section input, .settings-section select {width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;}
+.settings-section button {margin-top:15px; padding:10px 20px; border:none; border-radius:8px; background:#ff6600; color:white; cursor:pointer; transition:0.3s;}
+.settings-section button:hover {background:#e65100;}
+</style>
+</head>
+<body>
+
+<div class="sidebar" role="navigation" aria-label="Admin Panel">
+    <h2>Admin Panel</h2>
+    <a href="admin.html">Dashboard</a>
+    <a href="users.html">User Management</a>
+    <a href="orders.html">Orders</a>
+    <a href="meals.html">Meals Menu</a>
+    <a href="analytics.html">Analytics</a>
+    <a href="settings.html" class="active">Settings</a>
+	<a href="messages.html">Messages</a>
+</div>
+
+<div class="main">
+    <h1>System Settings ⚙️</h1>
+
+    <!-- Currency & Localization -->
+    <div class="settings-section">
+        <h2>Currency & Localization</h2>
+        <label for="currency">Currency</label>
+        <select id="currency">
+            <option value="TZS">Tanzanian Shilling (TZS)</option>
+            <option value="USD">US Dollar (USD)</option>
+            <option value="EUR">Euro (EUR)</option>
+        </select>
+        <label for="timezone">Timezone</label>
+        <select id="timezone">
+            <option value="EAT">East Africa Time (EAT)</option>
+            <option value="UTC">UTC</option>
+            <option value="GMT">GMT</option>
+        </select>
+        <button onclick="saveCurrencySettings()">Save</button>
+    </div>
+
+    <!-- Notification Settings -->
+    <div class="settings-section">
+        <h2>Notifications</h2>
+        <label>
+            <input type="checkbox" id="emailNotif"> Email Notifications
+        </label>
+        <label>
+            <input type="checkbox" id="smsNotif"> SMS Notifications
+        </label>
+        <label>
+            <input type="checkbox" id="pushNotif"> Push Notifications
+        </label>
+        <button onclick="saveNotificationSettings()">Save</button>
+    </div>
+
+    <!-- Theme Settings -->
+    <div class="settings-section">
+        <h2>Theme & Appearance</h2>
+        <label for="themeSelect">Select Theme</label>
+        <select id="themeSelect">
+            <option value="light">Light Mode</option>
+            <option value="dark">Dark Mode</option>
+        </select>
+        <button onclick="saveThemeSettings()">Save</button>
+    </div>
+
+</div>
+
+<script>
+// --- Load settings from backend ---
+async function loadSettings() {
+    try {
+        const res = await fetch('/api/settings');
+        const settings = await res.json();
+
+        document.getElementById('currency').value = settings.currency || 'TZS';
+        document.getElementById('timezone').value = settings.timezone || 'EAT';
+        document.getElementById('emailNotif').checked = settings.emailNotif === 'true';
+        document.getElementById('smsNotif').checked = settings.smsNotif === 'true';
+        document.getElementById('pushNotif').checked = settings.pushNotif === 'true';
+        document.getElementById('themeSelect').value = settings.theme || 'light';
+
+        applyTheme(settings.theme || 'light');
+    } catch(err) {
+        console.error('❌ Failed to load settings', err);
+    }
+}
+
+// --- Save a setting to backend ---
+async function saveSetting(key, value) {
+    try {
+        await fetch(`/api/settings/${key}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value })
+        });
+        console.log('✅ Setting saved:', key, value);
+    } catch(err) {
+        console.error('❌ Failed to save setting', err);
+    }
+}
+
+// --- Button handlers ---
+function saveCurrencySettings() {
+    const currency = document.getElementById('currency').value;
+    const timezone = document.getElementById('timezone').value;
+    saveSetting('currency', currency);
+    saveSetting('timezone', timezone);
+    alert(`Currency & Timezone Saved:\n${currency} | ${timezone}`);
+}
+
+function saveNotificationSettings() {
+    saveSetting('emailNotif', document.getElementById('emailNotif').checked);
+    saveSetting('smsNotif', document.getElementById('smsNotif').checked);
+    saveSetting('pushNotif', document.getElementById('pushNotif').checked);
+    alert('Notifications Saved');
+}
+
+function saveThemeSettings() {
+    const theme = document.getElementById('themeSelect').value;
+    saveSetting('theme', theme);
+    applyTheme(theme);
+    alert(`Theme Saved: ${theme}`);
+}
+
+// --- Apply theme dynamically ---
+function applyTheme(theme) {
+    if(theme === 'dark'){
+        document.body.style.background = '#1a1a1a';
+        document.body.style.color = 'green';
+    } else {
+        document.body.style.background = '#f4f4f8';
+        document.body.style.color = 'black';
+    }
+}
+// Load on page load
+window.onload = loadSettings;
+</script>
+
+
+</body>
+</html>

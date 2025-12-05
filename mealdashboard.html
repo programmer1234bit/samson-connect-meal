@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supplier Dashboard | Order Summary</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCSvZmGKlv9reCpsacvBhxhOrN7eMzOGCA&libraries=places&loading=async"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Global Styles */
+    :root {
+      --primary-orange: #ff7e00;
+      --secondary-gold: #ffbe0b;
+      --dark-bg: #1f2937;
+      --light-bg: #f9fafb;
+      --text-color: #374151;
+      --border-color: #e5e7eb;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: var(--light-bg);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: row;
+      overflow-x: hidden;
+    }
+
+    /* Map Component */
+    #map {
+      height: 18rem;
+      width: 100%;
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+      margin: 1rem;
+      flex-shrink: 0;
+    }
+
+    /* Sidebar */
+    aside {
+      width: 18rem;
+      background: var(--dark-bg);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+
+    aside > div {
+      padding: 1.5rem 2rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      border-bottom: 1px solid #374151;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    nav {
+      flex: 1;
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    nav a {
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.5rem;
+      background: transparent;
+      color: #e5e7eb;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    nav a:hover {
+      background: #374151;
+      color: #fff;
+    }
+
+    nav a.active {
+      background: var(--primary-orange);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(255,126,0,0.3);
+      transform: translateY(-2px);
+    }
+
+    /* Main Content */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+    }
+
+    header {
+      height: 5rem;
+      background: #fff;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2.5rem;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+      flex-shrink: 0;
+    }
+
+    /* Orders Section */
+    .orders-section {
+      width: 24rem;
+      background: #fcfcfd;
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .orders-section > div {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .orders-section h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #111827;
+      margin: 0;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    ul li {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    ul li:hover {
+      background: #f4f6f8;
+    }
+
+    /* Order Detail Section */
+    .order-detail-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    .order-detail-card {
+      background: #fff;
+      border-radius: 0.75rem;
+      padding: 2rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+      margin: 1rem;
+    }
+
+    .order-detail-card h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0 0 1rem 0;
+    }
+
+    .order-items > div {
+      display: flex;
+      justify-content: space-between;
+      margin: 0.5rem 0;
+      color: #4b5563;
+    }
+
+    .order-items > div span:last-child {
+      font-weight: 500;
+    }
+
+    .price-summary {
+      border-top: 1px dashed var(--border-color);
+      padding-top: 1rem;
+      margin-top: 1rem;
+      font-size: 0.95rem;
+      color: #4b5563;
+    }
+
+    .price-summary p {
+      margin: 0.5rem 0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .price-summary p:last-child {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .meta-info {
+      font-size: 0.95rem;
+      color: #6b7280;
+      margin-top: 1.5rem;
+    }
+
+    .meta-info p {
+      margin: 0.5rem 0;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    button {
+      flex: 1;
+      padding: 1rem;
+      border: none;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      font-size: 1.125rem;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .accept-btn {
+      background: var(--primary-orange);
+    }
+
+    .accept-btn:hover {
+      background: #e65c00;
+      box-shadow: 0 6px 15px rgba(255,126,0,0.4);
+      transform: translateY(-2px);
+    }
+
+    .reject-btn {
+      background: #ef4444;
+    }
+
+    .reject-btn:hover {
+      background: #dc2626;
+      box-shadow: 0 6px 15px rgba(239,68,68,0.4);
+      transform: translateY(-2px);
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-left: 0.5rem;
+    }
+    .status-badge.confirmed {
+      background-color: #fef3c7;
+      color: #b45309;
+    }
+    .status-badge.preparing {
+      background-color: #dbeafe;
+      color: #1d4ed8;
+    }
+    .status-badge.delivered {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+    .status-badge.cancelled {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      aside { width: 100%; }
+      .orders-section { width: 100%; border-right: none; }
+      .order-detail-section { margin-top: 1rem; }
+      .action-buttons { flex-direction: column; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <aside>
+    <div>
+      <span style="font-size: 2rem;">🍔</span> Supplier
+    </div>
+    <nav>
+      <a href="#" class="active">
+        <span style="font-size: 1.25rem;">📝</span>
+        Order Summary
+      </a>
+      <a href="#">
+        <span style="font-size: 1.25rem;"></span>
+        Meals
+      </a>
+      <a href="#">
+        <span style="font-size: 1.25rem;">📊</span>
+        Stats
+      </a>
+      <a href="#">
+        <span style="font-size: 1.25rem;">⚙️</span>
+        Settings
+      </a>
+    </nav>
+  </aside>
+
+  <main>
+    <header>
+      <h1 style="font-size: 1.75rem; font-weight: 700;">Dashboard</h1>
+      <span id="loggedInUser" style="font-weight: 500;"></span>
+    </header>
+    <div style="display: flex; flex: 1; overflow: hidden;">
+      <section class="orders-section">
+        <div>
+          <h2>Incoming Orders</h2>
+        </div>
+        <ul id="ordersList">
+          <li style="text-align: center; color: #6b7280; padding: 2rem;">Loading orders...</li>
+        </ul>
+      </section>
+
+      <section class="order-detail-section">
+        <div id="map"></div>
+        <div class="order-detail-card">
+          <h2 id="orderTitle" style="color: #6b7280;">
+            Select an order to view details
+          </h2>
+          <div id="items" class="order-items"></div>
+          <div id="priceSummary" class="price-summary"></div>
+          <div id="meta" class="meta-info"></div>
+          <div class="action-buttons">
+            <button id="acceptBtn" class="accept-btn">Accept Order ✅</button>
+            <button id="rejectBtn" class="reject-btn">Reject Order ❌</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    // Initialize variables
+    let SUPPLIER = { lat: -6.7924, lng: 39.2083 };
+    let map, directionsService, directionsRenderer, supplierMarker, customerMarker;
+    let orders = [];
+    document.getElementById('loggedInUser').textContent = `Test Mode`;
+
+    // Load Google Maps libraries
+    async function loadGoogleMaps() {
+      try {
+        await Promise.all([
+          google.maps.importLibrary('maps'),
+          google.maps.importLibrary('marker'),
+          google.maps.importLibrary('places')
+        ]);
+        initMap();
+      } catch (err) {
+        console.error('Google Maps load error:', err);
+        document.getElementById('map').innerHTML = '<p style="text-align: center; color: red;">Map unavailable</p>';
+        fetchOrders();
+      }
+    }
+
+    // Initialize map
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: SUPPLIER,
+        zoom: 13,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true,
+      });
+      directionsService = new google.maps.DirectionsService();
+      directionsRenderer = new google.maps.DirectionsRenderer({
+        map: map,
+        suppressMarkers: true,
+        polylineOptions: { strokeColor: 'var(--primary-orange)', strokeWeight: 6 }
+      });
+      supplierMarker = new google.maps.marker.AdvancedMarkerElement({
+        position: SUPPLIER,
+        map: map,
+        title: 'Supplier',
+        content: new google.maps.marker.PinElement({
+          glyph: '🍔',
+          background: 'var(--primary-orange)',
+          borderColor: '#fff'
+        }).element
+      });
+      fetchOrders();
+    }
+
+    // This function now fetches data without needing a token.
+    async function fetchOrders() {
+      try {
+        document.getElementById('ordersList').innerHTML = '<li style="text-align: center; color: #6b7280; padding: 2rem;">Loading orders...</li>';
+        
+        // Simulating API data since there is no backend server running.
+        const sampleOrders = [
+            {
+              "id": 101,
+              "customer_name": "Jane Doe",
+              "status": "Confirmed",
+              "total_price": 55000,
+              "delivery_address": "123 Main Street, Dar es Salaam",
+              "delivery_lat": -6.78,
+              "delivery_lng": 39.22,
+              "items": [{"name": "Burger", "qty": 2, "price": 15000}, {"name": "Fries", "qty": 1, "price": 5000}],
+              "subtotal": 35000,
+              "delivery_fee": 20000,
+              "time_ordered": "2025-09-11T12:00:00Z",
+              "customer_phone": "555-1234"
+            },
+            {
+              "id": 102,
+              "customer_name": "John Smith",
+              "status": "Preparing",
+              "total_price": 40000,
+              "delivery_address": "456 Oak Avenue, Dar es Salaam",
+              "delivery_lat": -6.79,
+              "delivery_lng": 39.20,
+              "items": [{"name": "Pizza", "qty": 1, "price": 40000}],
+              "subtotal": 40000,
+              "delivery_fee": 0,
+              "time_ordered": "2025-09-11T11:45:00Z",
+              "customer_phone": "555-5678"
+            }
+        ];
+
+        orders = sampleOrders;
+
+        if (orders.length === 0) {
+          document.getElementById('ordersList').innerHTML = '<li style="text-align: center; color: #6b7280; padding: 2rem;">No incoming orders</li>';
+          return;
+        }
+        showOrder(orders[0]);
+        populateOrdersList();
+      } catch (err) {
+        console.error('Fetch orders error:', err);
+        document.getElementById('ordersList').innerHTML = `<li style="text-align: center; color: #dc2626; padding: 2rem;">Error: ${err.message}</li>`;
+      }
+    }
+
+    function populateOrdersList() {
+      const ordersList = document.getElementById('ordersList');
+      ordersList.innerHTML = '';
+      orders.forEach(order => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="font-weight: 600; font-size: 1.125rem; margin: 0 0 0.25rem 0;">Order #${order.id}</p>
+              <p style="font-size: 0.875rem; color: #6b7280; margin: 0;">${order.customer_name}</p>
+            </div>
+            <div style="text-align: right;">
+              <span class="status-badge ${order.status.toLowerCase()}">${order.status}</span>
+              <p style="font-weight: 600; font-size: 1.125rem; color: var(--primary-orange); margin: 0.25rem 0 0 0;">Tsh ${order.total_price.toLocaleString()}</p>
+            </div>
+          </div>
+        `;
+        li.addEventListener('click', () => showOrder(order));
+        ordersList.appendChild(li);
+      });
+    }
+
+    function showOrder(order) {
+      if (customerMarker) customerMarker.map = null;
+      const customerPos = { lat: order.delivery_lat || -6.8000, lng: order.delivery_lng || 39.2500 };
+      customerMarker = new google.maps.marker.AdvancedMarkerElement({
+        position: customerPos,
+        map: map,
+        title: 'Customer',
+        content: new google.maps.marker.PinElement({
+          glyph: '🏠',
+          background: '#4CAF50',
+          borderColor: '#fff'
+        }).element
+      });
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend(SUPPLIER);
+      bounds.extend(customerPos);
+      map.fitBounds(bounds);
+      directionsService.route({
+        origin: SUPPLIER,
+        destination: customerPos,
+        travelMode: google.maps.TravelMode.DRIVING
+      }, (result, status) => {
+        if (status === 'OK') {
+          directionsRenderer.setDirections(result);
+          const leg = result.routes[0].legs[0];
+          updateOrderInfo(order, leg.distance.text, leg.duration.text);
+        } else {
+          console.error('Directions request failed:', status);
+          updateOrderInfo(order, '--', '--');
+        }
+      });
+    }
+
+    function updateOrderInfo(order, distanceText, etaText) {
+      document.getElementById('orderTitle').textContent = `Order #${order.id} Details`;
+      const itemsDiv = document.getElementById('items');
+      itemsDiv.innerHTML = '';
+      order.items.forEach(i => {
+        const div = document.createElement('div');
+        div.innerHTML = `<span>${i.name} x ${i.qty}</span><span>Tsh ${(i.price * i.qty).toLocaleString()}</span>`;
+        itemsDiv.appendChild(div);
+      });
+      document.getElementById('priceSummary').innerHTML = `
+        <p><span>Subtotal</span><span>Tsh ${order.subtotal.toLocaleString()}</span></p>
+        <p><span>Delivery Fee</span><span>Tsh ${order.delivery_fee.toLocaleString()}</span></p>
+        <p><span>Total</span><span>Tsh ${order.total_price.toLocaleString()}</span></p>
+      `;
+      document.getElementById('meta').innerHTML = `
+        <p><strong>Customer:</strong> ${order.customer_name} (${order.customer_phone})</p>
+        <p><strong>Address:</strong> ${order.delivery_address}</p>
+        <p><strong>Distance:</strong> ${distanceText}</p>
+        <p><strong>ETA:</strong> ${etaText}</p>
+        <p><strong>Placed:</strong> ${order.time_ordered}</p>
+      `;
+    }
+
+    // Now, these button event listeners are also free of login checks.
+    document.getElementById('acceptBtn').addEventListener('click', () => {
+      const orderIdMatch = document.getElementById('orderTitle').textContent.match(/#(\d+)/);
+      if (!orderIdMatch) return alert('No order selected');
+      const orderId = orderIdMatch[1];
+      alert(`Order #${orderId} accepted! ✅`);
+      const order = orders.find(o => o.id == orderId);
+      if(order) order.status = 'Preparing';
+      populateOrdersList();
+    });
+
+    document.getElementById('rejectBtn').addEventListener('click', () => {
+      const orderIdMatch = document.getElementById('orderTitle').textContent.match(/#(\d+)/);
+      if (!orderIdMatch) return alert('No order selected');
+      const orderId = orderIdMatch[1];
+      alert(`Order #${orderId} rejected! ❌`);
+      const order = orders.find(o => o.id == orderId);
+      if(order) order.status = 'Cancelled';
+      populateOrdersList();
+    });
+
+    document.addEventListener('DOMContentLoaded', loadGoogleMaps);
+  </script>
+</body>
+</html>

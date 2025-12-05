@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics | Samson Connect Meals</title>
+<style>
+body {margin:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f4f4f8; display:flex; min-height:100vh;}
+.sidebar {width:250px; background:#1a1a1a; color:white; display:flex; flex-direction:column; padding:20px; box-shadow:3px 0 12px rgba(0,0,0,0.3);}
+.sidebar h2 {margin:0 0 30px 0; font-size:22px; color:#ff6600; text-align:center;}
+.sidebar a {color:white; text-decoration:none; padding:12px 15px; border-radius:8px; margin-bottom:10px; display:block; transition:0.3s;}
+.sidebar a:hover, .sidebar a.active {background:#ff6600; color:black;}
+.main {flex:1; padding:30px;}
+.main h1 {color:#ff6600; margin-bottom:20px;}
+.cards {display:flex; gap:20px; flex-wrap:wrap; margin-bottom:30px;}
+.card {flex:1 1 200px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); text-align:center; transition:transform 0.3s;}
+.card:hover {transform:translateY(-5px); box-shadow:0 8px 20px rgba(0,0,0,0.25);}
+.card h3 {margin-bottom:10px; color:#ff6600;}
+.chart-container {background:white; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+.chart-container canvas {max-width:100%; height:200px;}
+@media (max-width: 768px) {
+    .sidebar {width:100%; height:auto;}
+    .cards {flex-direction:column;}
+}
+</style>
+<script src="/theme.js"></script>
+</head>
+<body>
+
+<div class="sidebar" role="navigation" aria-label="Admin Panel">
+    <h2>Admin Panel</h2>
+    <a href="admin.html">Dashboard</a>
+    <a href="users.html">User Management</a>
+    <a href="orders.html">Orders</a>
+    <a href="meals.html">Meals Menu</a>
+    <a href="analytics.html" class="active">Analytics</a>
+    <a href="settings.html">Settings</a>
+	<a href="messages.html">Messages</a>
+</div>
+
+<div class="main">
+    <h1>Analytics Dashboard 📊</h1>
+
+    <!-- Top Cards -->
+    <div class="cards">
+        <div class="card">
+            <h3>Total Users</h3>
+            <p id="totalUsers">0</p>
+        </div>
+        <div class="card">
+            <h3>Total Suppliers</h3>
+            <p id="totalSuppliers">0</p>
+        </div>
+        <div class="card">
+            <h3>Total Orders</h3>
+            <p id="totalOrders">0</p>
+        </div>
+        <div class="card">
+            <h3>Total Revenue</h3>
+            <p id="totalRevenue">TZS 0</p>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+        <div class="chart-container" style="flex:1; min-width:250px;">
+            <h3>Meal Status</h3>
+            <canvas id="statusChart"></canvas>
+        </div>
+        <div class="chart-container" style="flex:1; min-width:250px;">
+            <h3>Top Supplier Contribution</h3>
+            <canvas id="supplierChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h3>Top Selling Meals</h3>
+        <canvas id="popularMealsChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h3>Revenue per Supplier</h3>
+        <canvas id="revenueSupplierChart"></canvas>
+    </div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let statusChart, supplierChart, popularMealsChart, revenueChart;
+
+async function loadAnalytics() {
+    try {
+        const [overview, mealStatus, topSuppliers, topMeals, revenueSuppliers] = await Promise.all([
+            fetch("/api/analytics/overview").then(r => r.json()),
+            fetch("/api/analytics/meal-status").then(r => r.json()),
+            fetch("/api/analytics/top-suppliers").then(r => r.json()),
+            fetch("/api/analytics/top-meals").then(r => r.json()),
+            fetch("/api/analytics/revenue-suppliers").then(r => r.json())
+        ]);
+
+        // --- Update Cards ---
+        document.getElementById("totalUsers").textContent = overview.totalUsers;
+        document.getElementById("totalSuppliers").textContent = overview.totalSuppliers;
+        document.getElementById("totalOrders").textContent = overview.totalOrders;
+        document.getElementById("totalRevenue").textContent = "TZS " + overview.totalRevenue.toLocaleString();
+
+        // --- Update Charts ---
+        updateCharts(mealStatus, topSuppliers, topMeals, revenueSuppliers);
+
+    } catch (err) {
+        console.error("❌ Failed to load analytics", err);
+    }
+}
+
+function updateCharts(mealStatus, topSuppliers, topMeals, revenueSuppliers) {
+    // Destroy previous charts if they exist
+    if (statusChart) statusChart.destroy();
+    if (supplierChart) supplierChart.destroy();
+    if (popularMealsChart) popularMealsChart.destroy();
+    if (revenueChart) revenueChart.destroy();
+
+    // --- Meal Status Chart ---
+    statusChart = new Chart(document.getElementById('statusChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['Available', 'Unavailable'],
+            datasets: [{
+                label: 'Number of Meals',
+                data: [mealStatus.available, mealStatus.unavailable],
+                backgroundColor: ['#4caf50', '#f44336']
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // --- Top Suppliers Chart ---
+    supplierChart = new Chart(document.getElementById('supplierChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: topSuppliers.map(s => s.supplier),
+            datasets: [{
+                label: 'Meals Supplied',
+                data: topSuppliers.map(s => s.total_meals),
+                backgroundColor: '#ff9900'
+            }]
+        },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // --- Top Meals Chart ---
+    popularMealsChart = new Chart(document.getElementById('popularMealsChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: topMeals.map(m => m.name),
+            datasets: [{
+                label: 'Orders',
+                data: topMeals.map(m => m.total_orders),
+                backgroundColor: '#e65100'
+            }]
+        },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // --- Revenue per Supplier Chart ---
+    revenueChart = new Chart(document.getElementById('revenueSupplierChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: revenueSuppliers.map(r => r.supplier),
+            datasets: [{
+                label: 'Revenue (TZS)',
+                data: revenueSuppliers.map(r => r.revenue),
+                backgroundColor: '#ff6600'
+            }]
+        },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+    });
+}
+
+// --- Initial Load ---
+loadAnalytics();
+
+// --- Auto-refresh once every 24 hours ---
+setInterval(loadAnalytics, 86400000); // 86,400,000 ms = 24 hours
+</script>
+
+
+</body>
+</html>
