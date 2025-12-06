@@ -189,55 +189,122 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
             margin-top: 20px; 
         }
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            .sidebar { width: 200px; }
-            .main { padding: 20px; }
-            .cards { flex-direction: column; gap: 10px; }
-            .table-filter { justify-content: center; }
-            .search-box input { max-width: 100%; }
-            table { font-size: 0.85rem; min-width: 100%; }
-            table th, table td { padding: 8px 6px; }
-            .main { overflow-x: auto; }
-        }
-
-        /* modal styles */
+        /* modal styles - IMPROVED */
         #mapModal {
           position: fixed;
-          inset: 0;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
           display: none;
           align-items: center;
           justify-content: center;
-          background: rgba(0,0,0,0.6);
-          z-index: 2000;
-        }
-        #mapModal.open { display:flex; }
-        #mapModal .modal-content {
-          width: 95%;
-          max-width: 900px;
-          background: #fff;
-          border-radius: 12px;
+          background: rgba(0, 0, 0, 0.7);
+          z-index: 9999;
           overflow: hidden;
-          box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        }
+        #mapModal.open { 
+          display: flex; 
+        }
+        #mapModal .modal-content {
+          width: 90%;
+          max-width: 1000px;
+          height: 85vh;
+          max-height: 800px;
+          background: #fff;
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+          display: flex;
+          flex-direction: column;
+          animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
         #mapModal .modal-header {
-          display:flex; justify-content:space-between; align-items:center;
-          padding:12px 16px; background:#ff6600; color:#fff;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 20px;
+          background: linear-gradient(90deg, #ff6600 0%, #ff8c00 100%);
+          color: #fff;
+          font-weight: 700;
+          font-size: 1.1rem;
+          flex-shrink: 0;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
-        #mapModal .modal-body { padding:0; }
-        #orderMap { width:100%; height:420px; }
-        #mapInfo { padding:12px 16px; font-size:0.95rem; color:#333; }
+        #mapModal .modal-body { 
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          overflow: hidden;
+          padding: 0;
+        }
+        #orderMap { 
+          width: 100%; 
+          height: 100%; 
+          flex: 1;
+          min-height: 400px;
+          background: #f3f4f6;
+          position: relative;
+        }
+        #mapInfo { 
+          padding: 16px 20px; 
+          font-size: 0.95rem; 
+          color: #333;
+          background: #f9fafb;
+          border-top: 1px solid #e5e7eb;
+          flex-shrink: 0;
+        }
         #mapModal .close-btn {
-          background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;
+          background: transparent; 
+          border: none; 
+          color: #fff; 
+          font-size: 28px; 
+          cursor: pointer;
+          padding: 0 8px;
+          transition: transform 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+        }
+        #mapModal .close-btn:hover {
+          transform: scale(1.15);
         }
         .delivery-marker {
-          display:block;
-          width:18px;
-          height:18px;
-          border-radius:50%;
-          background:#ff3b30;
-          border:2px solid #fff;
-          box-shadow:0 2px 6px rgba(0,0,0,0.25);
+          display: block;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: #ff3b30;
+          border: 2px solid #fff;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Ensure body doesn't scroll when modal is open */
+        body.modal-open {
+          overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+          #mapModal .modal-content {
+            width: 95%;
+            height: 90vh;
+            max-height: none;
+          }
+          #orderMap {
+            min-height: 300px;
+          }
         }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -544,65 +611,127 @@
         // Render using Google Maps (simple markers + fitBounds)
         function renderGoogleMap(supplierCoords, customerCoords) {
           const container = document.getElementById('orderMap');
-          // ensure container empty
+          if (!container) {
+            console.error('❌ Map container not found');
+            return;
+          }
+          
           container.innerHTML = '';
-
           orderMapMarkers = [];
 
-          // create map centered between points if both available
-          const center = customerCoords || supplierCoords || { lat: -6.7924, lng: 39.2083 };
-          orderMap = new google.maps.Map(container, {
-            center,
-            zoom: 14,
-            fullscreenControl: true,
-            streetViewControl: true
-          });
-
-          // supplier marker
-          const supMarker = new google.maps.Marker({
-            position: supplierCoords,
-            map: orderMap,
-            title: 'Supplier'
-          });
-          orderMapMarkers.push(supMarker);
-
-          if (customerCoords) {
-            const custMarker = new google.maps.Marker({
-              position: customerCoords,
-              map: orderMap,
-              title: 'Customer'
+          try {
+            const center = customerCoords || supplierCoords || { lat: -6.7924, lng: 39.2083 };
+            orderMap = new google.maps.Map(container, {
+              center,
+              zoom: 14,
+              fullscreenControl: true,
+              streetViewControl: true,
+              mapTypeControl: true,
+              zoomControl: true
             });
-            orderMapMarkers.push(custMarker);
 
-            const bounds = new google.maps.LatLngBounds();
-            bounds.extend(supplierCoords);
-            bounds.extend(customerCoords);
-            orderMap.fitBounds(bounds);
-          } else {
-            orderMap.setCenter(supplierCoords);
+            // supplier marker
+            const supMarker = new google.maps.Marker({
+              position: supplierCoords,
+              map: orderMap,
+              title: '🏪 Restaurant',
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: '#ff6600',
+                fillOpacity: 1,
+                strokeWeight: 2,
+                strokeColor: '#fff'
+              }
+            });
+            orderMapMarkers.push(supMarker);
+
+            if (customerCoords) {
+              const custMarker = new google.maps.Marker({
+                position: customerCoords,
+                map: orderMap,
+                title: '📍 Customer',
+                icon: {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 10,
+                  fillColor: '#10b981',
+                  fillOpacity: 1,
+                  strokeWeight: 2,
+                  strokeColor: '#fff'
+                }
+              });
+              orderMapMarkers.push(custMarker);
+
+              const bounds = new google.maps.LatLngBounds();
+              bounds.extend(supplierCoords);
+              bounds.extend(customerCoords);
+              orderMap.fitBounds(bounds);
+            }
+            
+            console.log('✅ Google Map rendered successfully');
+          } catch (e) {
+            console.error('❌ Google Map render error:', e);
           }
         }
 
-        // Existing Leaflet render function (keeps the previously implemented code)
+        // Existing Leaflet render function
         function renderLeafletMap(supplierCoords, customerCoords) {
-          // instantiate Leaflet map
-          orderMap = L.map('orderMap', { zoomControl: true, attributionControl: false });
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(orderMap);
+          const container = document.getElementById('orderMap');
+          if (!container) {
+            console.error('❌ Map container not found');
+            return;
+          }
 
-          const supplierMarker = L.marker([supplierCoords.lat, supplierCoords.lng], { title: 'Supplier' }).addTo(orderMap);
-          orderMapMarkers.push(supplierMarker);
+          container.innerHTML = '';
 
-          if (customerCoords) {
-            const customerMarker = L.marker([customerCoords.lat, customerCoords.lng], {
-              title: 'Customer',
-              icon: L.icon({ iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', iconSize: [25,41], iconAnchor:[12,41] })
+          try {
+            orderMap = L.map(container, { 
+              zoomControl: true, 
+              attributionControl: true,
+              maxZoom: 19,
+              minZoom: 2
+            });
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap contributors',
+              maxZoom: 19
             }).addTo(orderMap);
-            orderMapMarkers.push(customerMarker);
 
-            const bounds = L.latLngBounds([ [supplierCoords.lat, supplierCoords.lng], [customerCoords.lat, customerCoords.lng] ]);
-            orderMap.fitBounds(bounds.pad(0.2));
-          } else {
-            orderMap.setView([supplierCoords.lat, supplierCoords.lng], 14);
+            const supMarker = L.marker([supplierCoords.lat, supplierCoords.lng], {
+              title: '🏪 Restaurant',
+              icon: L.divIcon({
+                html: '🏪',
+                iconSize: [32, 32],
+                className: 'text-marker'
+              })
+            }).bindPopup('<b>🏪 Restaurant</b><br>Order prepared here').addTo(orderMap);
+            
+            orderMapMarkers.push(supMarker);
+
+            if (customerCoords) {
+              const custMarker = L.marker([customerCoords.lat, customerCoords.lng], {
+                title: '📍 Customer',
+                icon: L.divIcon({
+                  html: '📍',
+                  iconSize: [32, 32],
+                  className: 'text-marker'
+                })
+              }).bindPopup('<b>📍 Customer Location</b><br>Delivery destination').addTo(orderMap);
+              
+              orderMapMarkers.push(custMarker);
+
+              const bounds = L.latLngBounds([ 
+                [supplierCoords.lat, supplierCoords.lng], 
+                [customerCoords.lat, customerCoords.lng] 
+              ]);
+              orderMap.fitBounds(bounds.pad(0.15));
+            } else {
+              orderMap.setView([supplierCoords.lat, supplierCoords.lng], 14);
+            }
+            
+            console.log('✅ Leaflet Map rendered successfully');
+          } catch (e) {
+            console.error('❌ Leaflet Map render error:', e);
           }
         }
 
@@ -652,56 +781,71 @@
 
           const modal = document.getElementById('mapModal');
           const info = document.getElementById('mapInfo');
+          const mapContainer = document.getElementById('orderMap');
 
           // Customer coordinates (from order)
           const customerCoords = extractCoords(order);
 
-          // Supplier coordinates: fetch fixed supplier location (server or order fields). Do NOT read user's current location.
+          // Supplier coordinates: fetch fixed supplier location (server or order fields)
           let supplierCoords = await fetchSupplierCoords(order.supplier || order.supplier_name, order);
 
-          modal.classList.add('open');
-          document.body.style.overflow = 'hidden';
-
+          // Clear previous map
+          mapContainer.innerHTML = '';
+          
+          // Update info
           const custAddr = order.delivery_address || order.address || (order.items && order.items[0] && order.items[0].delivery_address) || '';
           info.innerHTML = `
-            <strong>Order:</strong> ${escapeHtml(String(order.id))} &nbsp;
-            <strong>Customer:</strong> ${escapeHtml(order.customer || 'N/A')}<br>
-            <strong>Address:</strong> ${escapeHtml(custAddr || 'Not provided')}<br>
-            <small style="color:#666">Close map to return to the list.</small>
+            <strong>Order #${escapeHtml(String(order.id))}</strong> | 
+            <strong>Customer:</strong> ${escapeHtml(order.customer || 'N/A')} | 
+            <strong>Address:</strong> ${escapeHtml(custAddr || 'Not provided')}
           `;
 
-          // Try Google Maps, otherwise fallback to Leaflet
-          loadGoogleMapsApi()
-            .then(() => {
-              if (window.google && window.google.maps) {
-                renderGoogleMap(supplierCoords, customerCoords);
-              } else {
-                renderLeafletMap(supplierCoords, customerCoords);
-              }
-            })
-            .catch((err) => {
-              console.warn('Google Maps load failed, using Leaflet fallback:', err);
-              if (typeof L !== 'undefined') {
-                renderLeafletMap(supplierCoords, customerCoords);
-              } else {
-                const c = document.getElementById('orderMap');
-                c.innerHTML = '<div style="padding:20px;color:#c00">Map unavailable (no mapping libraries loaded).</div>';
-              }
-            });
+          // Open modal with animation
+          modal.classList.add('open');
+          document.body.classList.add('modal-open');
 
-          // after the map is rendered successfully, start tracking the deliverer
-          // we attempt to start tracking regardless of whether driver coords are currently available
-          startTracking(id, 5000);
+          // Small delay to allow DOM to render before initializing map
+          setTimeout(() => {
+            try {
+              loadGoogleMapsApi()
+                .then(() => {
+                  if (window.google && window.google.maps) {
+                    console.log('✅ Rendering Google Map...');
+                    renderGoogleMap(supplierCoords, customerCoords);
+                  } else {
+                    console.log('✅ Rendering Leaflet Map (Google failed)...');
+                    renderLeafletMap(supplierCoords, customerCoords);
+                  }
+                })
+                .catch((err) => {
+                  console.warn('⚠️ Google Maps load failed, using Leaflet fallback:', err);
+                  if (typeof L !== 'undefined') {
+                    renderLeafletMap(supplierCoords, customerCoords);
+                  } else {
+                    mapContainer.innerHTML = '<div style="padding:20px;color:#c00;text-align:center;font-weight:600;">Map unavailable</div>';
+                  }
+                });
+            } catch (e) {
+              console.error('❌ Map initialization error:', e);
+              mapContainer.innerHTML = '<div style="padding:20px;color:#c00;text-align:center;font-weight:600;">Error loading map</div>';
+            }
+
+            // Start tracking deliverer
+            startTracking(id, 5000);
+          }, 100);
         }
 
         /* close modal by clicking overlay */
         document.getElementById('mapModal').addEventListener('click', (e) => {
-          if (e.target && e.target.id === 'mapModal') closeMapModal();
+          if (e.target && e.target.id === 'mapModal') {
+            closeMapModal();
+          }
         });
 
         function closeMapModal() {
           const modal = document.getElementById('mapModal');
           modal.classList.remove('open');
+          document.body.classList.remove('modal-open');
 
           // stop tracking when modal closes
           stopTracking();
@@ -714,17 +858,30 @@
                 deliveryMarker.setMap(null);
               }
             } catch(e){}
+            
+            // Cleanup all markers
             orderMapMarkers.forEach(m => {
-              try { if (m.remove) m.remove(); else if (m.setMap) m.setMap(null); } catch(e){}
+              try { 
+                if (m.remove) m.remove(); 
+                else if (m.setMap) m.setMap(null); 
+              } catch(e){}
             });
             orderMapMarkers = [];
-            try { orderMap.remove(); } catch(e){}
+            
+            // Cleanup map
+            try { 
+              if (orderMap.remove) orderMap.remove();
+              else orderMap = null;
+            } catch(e){}
+            
             orderMap = null;
-            // recreate DOM node for future maps
-            const container = document.getElementById('orderMap');
+          }
+          
+          // Clear map container
+          const container = document.getElementById('orderMap');
+          if (container) {
             container.innerHTML = '';
           }
-          document.body.style.overflow = '';
         }
 
         // Ensure global map state variables exist

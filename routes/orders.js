@@ -72,6 +72,64 @@ router.get("/", async (req, res) => {
 	}
 });
 
+// GET /:id - Fetch individual order
+router.get("/:id", async (req, res) => {
+	const { id } = req.params;
+	if (!id) return res.status(400).json({ error: "id required" });
+
+	try {
+		console.log(`🔍 Fetching order ${id}...`);
+		const result = await pool.query(
+			`SELECT 
+				id, 
+				username, 
+				supplier_name, 
+				items, 
+				subtotal, 
+				delivery_fee, 
+				total, 
+				status, 
+				created_at,
+				delivery_address,
+				delivery_lat,
+				delivery_lng,
+				user_coords
+			FROM orders
+			WHERE id = $1`,
+			[id]
+		);
+
+		if (result.rows.length === 0) {
+			console.warn(`⚠️ Order ${id} not found`);
+			return res.status(404).json({ error: "order not found" });
+		}
+
+		const r = result.rows[0];
+		const order = {
+			id: r.id,
+			customer: r.username || null,
+			supplier: r.supplier_name || null,
+			items: r.items || null,
+			subtotal: r.subtotal || null,
+			delivery_fee: r.delivery_fee || null,
+			total_price: r.total || null,
+			raw_status: r.status || null,
+			status: normalizeStatus(r.status),
+			created_at: r.created_at,
+			delivery_address: r.delivery_address,
+			delivery_lat: r.delivery_lat,
+			delivery_lng: r.delivery_lng,
+			user_coords: r.user_coords
+		};
+
+		console.log(`✅ Order ${id} fetched successfully`);
+		res.json(order);
+	} catch (e) {
+		console.error(`❌ GET /:id error:`, e);
+		res.status(500).json({ error: "failed to fetch order", details: e.message });
+	}
+});
+
 // PUT /:id/status - Update order status
 router.put("/:id/status", async (req, res) => {
 	const { id } = req.params;

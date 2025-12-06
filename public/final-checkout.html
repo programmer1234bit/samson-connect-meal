@@ -270,6 +270,10 @@ async function loadFinalOrderSummary() {
     const supplierName = localStorage.getItem('selectedSupplierName');
     const deliveryFee = parseInt(localStorage.getItem('deliveryFee') || '0', 10);
 
+    console.log('📋 Loading order summary for user:', username);
+    console.log('📋 Supplier:', supplierName);
+    console.log('📋 Delivery Fee:', deliveryFee);
+
     if (!username) {
         alert("User not logged in. Redirecting to login.");
         window.location.href = 'sign up.html';
@@ -277,36 +281,71 @@ async function loadFinalOrderSummary() {
     }
 
     try {
-        const res = await fetch(`http://localhost:5000/api/cart/${username}`);
-        if (!res.ok) throw new Error('Failed to fetch cart data.');
+        // Use relative path without http://localhost:5000
+        const cartUrl = `/api/cart/${username}`;
+        console.log('🔗 Fetching cart from:', cartUrl);
+        
+        const res = await fetch(cartUrl);
+        console.log('📊 Cart response status:', res.status);
+        
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error('❌ Cart fetch error:', res.status, errorText);
+            throw new Error(`Failed to fetch cart data: ${res.status}`);
+        }
+        
         const cart = await res.json();
+        console.log('✅ Cart items received:', cart);
         
         const orderList = document.getElementById('order-items-list');
         orderList.innerHTML = '';
         let subtotal = 0;
 
-        if (cart.length > 0) {
+        if (cart && Array.isArray(cart) && cart.length > 0) {
             cart.forEach(item => {
-                const itemTotal = item.price * item.quantity;
+                const itemPrice = Number(item.price || 0);
+                const itemQty = Number(item.quantity || 1);
+                const itemTotal = itemPrice * itemQty;
                 subtotal += itemTotal;
+                
                 const li = document.createElement('li');
-                li.innerHTML = `${item.quantity}x ${item.name} - <span class="font-semibold">${itemTotal.toLocaleString()} TSH</span>`;
+                li.innerHTML = `${itemQty}x ${escapeHtml(item.name || 'Unknown')} - <span class="font-semibold">${itemTotal.toLocaleString()} TSH</span>`;
                 orderList.appendChild(li);
+                
+                console.log(`  ✓ Added: ${itemQty}x ${item.name} = ${itemTotal} TSH`);
             });
         } else {
-            orderList.innerHTML = '<li>Your cart is empty.</li>';
+            console.warn('⚠️ Cart is empty or invalid:', cart);
+            orderList.innerHTML = '<li>Your cart is empty. Please add items before checkout.</li>';
         }
 
         const total = subtotal + deliveryFee;
+        
         document.getElementById('supplier-name').textContent = supplierName || 'N/A';
         document.getElementById('order-subtotal').textContent = `${subtotal.toLocaleString()} TSH`;
         document.getElementById('delivery-fee').textContent = `${deliveryFee.toLocaleString()} TSH`;
         document.getElementById('order-total').textContent = `${total.toLocaleString()} TSH`;
+        
+        console.log('✅ Order summary updated:');
+        console.log('  - Subtotal:', subtotal);
+        console.log('  - Delivery Fee:', deliveryFee);
+        console.log('  - Total:', total);
 
     } catch (err) {
-        console.error('Error loading order summary:', err);
-        document.getElementById('order-items-list').innerHTML = '<li>Failed to load cart.</li>';
+        console.error('❌ Error loading order summary:', err);
+        document.getElementById('order-items-list').innerHTML = `
+            <li style="color: #c00; font-weight: bold;">
+                Failed to load cart: ${err.message}
+            </li>
+        `;
     }
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 async function handleCheckout() {
@@ -349,12 +388,11 @@ async function handleCheckout() {
         const coords = userLocation || { lat: -6.7924, lng: 39.2083 }; // fallback
         const distance = localStorage.getItem('distance') || '0';
         const eta = localStorage.getItem('eta') || '0';
-        const supplierId = localStorage.getItem('selectedSupplierId') || null; // optional
+        const supplierId = localStorage.getItem('selectedSupplierId') || null;
 
         try {
-            // Fetch cart items to include in checkout
             console.log('Fetching cart for username:', username);
-            const cartResponse = await fetch(`http://localhost:5000/api/cart/${username}`);
+            const cartResponse = await fetch(`/api/cart/${username}`);
             console.log('Cart response status:', cartResponse.status);
             
             if (!cartResponse.ok) {
@@ -362,14 +400,14 @@ async function handleCheckout() {
                 console.error('Cart fetch error:', errorText);
                 throw new Error(`Failed to fetch cart items: ${cartResponse.status} ${errorText}`);
             }
+            
             let cartItems = await cartResponse.json();
             console.log('Cart items received:', cartItems);
             
             if (!cartItems || cartItems.length === 0) {
-                // Try debug endpoint as fallback
                 console.log('Cart empty, trying debug endpoint...');
                 try {
-                    const debugResponse = await fetch(`http://localhost:5000/api/checkout/debug/cart/${username}`);
+                    const debugResponse = await fetch(`/api/checkout/debug/cart/${username}`);
                     if (debugResponse.ok) {
                         const debugData = await debugResponse.json();
                         console.log('Debug cart data:', debugData);
@@ -394,11 +432,11 @@ async function handleCheckout() {
                 unit_price: Number(item.price || 0),
                 quantity: Number(item.quantity || 1),
                 subtotal: (Number(item.price || 0) * Number(item.quantity || 1))
-            ));
+            }));
 
             const payload = {
                 username,
-                items,                     // Include cart items
+                items,
                 supplierName,
                 supplierId,
                 deliveryFee,
@@ -423,7 +461,7 @@ async function handleCheckout() {
             console.log('Delivery Address:', payload.deliveryAddress);
             console.log('═══════════════════════════════════════════');
 
-            const res = await fetch('http://localhost:5000/api/checkout/checkout', {
+            const res = await fetch('/api/checkout/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -437,7 +475,6 @@ async function handleCheckout() {
             console.log('═══════════════════════════════════════════');
 
             if (res.ok) {
-                // store comprehensive info for order-success.html and supplier visibility
                 localStorage.setItem('orderInfo', JSON.stringify({
                     total: data.total,
                     userCoords: coords,
@@ -448,24 +485,21 @@ async function handleCheckout() {
                     orderId: data.orderId || data.order_id || null
                 }));
 
-                // also store individual items for the success page
                 localStorage.setItem('userCoords', JSON.stringify(coords));
                 localStorage.setItem('supplierCoords', JSON.stringify(supplierLocation));
 
-                // Store order ID for tracking
                 if (data.orderId) {
                     localStorage.setItem('lastOrderId', data.orderId);
                 }
 
                 // CLEAR CART from database after successful checkout
                 try {
-                    const clearCartRes = await fetch(`http://localhost:5000/api/cart/${username}`, {
+                    const clearCartRes = await fetch(`/api/cart/${username}`, {
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' }
                     });
                     if (clearCartRes.ok) {
                         console.log('✅ Cart cleared successfully');
-                        // Also clear from localStorage
                         localStorage.removeItem('cart');
                         localStorage.removeItem('cartItems');
                     } else {
@@ -473,7 +507,6 @@ async function handleCheckout() {
                     }
                 } catch (clearErr) {
                     console.error('❌ Error clearing cart:', clearErr);
-                    // Don't block redirect if cart clear fails
                 }
 
                 // redirect to order success page with order ID

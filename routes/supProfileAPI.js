@@ -1,126 +1,188 @@
 import express from 'express';
 import pool from '../db.js';
-
 const router = express.Router();
 
-// ⭐️ GET Supplier Profile - Flexible role checking
-router.get('/:id', async (req, res) => {
-    const supplierId = req.params.id;
+/**
+ * GET /api/supplier/profile/:supplierId
+ * Fetch supplier profile by ID or username
+ */
+router.get('/:supplierId', async (req, res) => {
+    const { supplierId } = req.params;
 
-    // Validate that ID is a number
-    if (!supplierId || isNaN(supplierId)) {
-        return res.status(400).json({ message: 'Invalid supplier ID ❌' });
+    if (!supplierId) {
+        return res.status(400).json({ message: 'Supplier ID is required' });
     }
 
     try {
-        // ⭐️ UPDATED: First check if user exists at all
-        const userCheck = await pool.query(
-            'SELECT id, role FROM users WHERE id = $1',
+        console.log(`📝 Fetching profile for supplier ID: ${supplierId}`);
+
+        // Try numeric ID first, then fallback to username
+        let result = await pool.query(
+            `SELECT 
+                id, 
+                username, 
+                email, 
+                phone, 
+                first_name, 
+                last_name,
+                restaurant_name, 
+                location, 
+                service_radius_km,
+                bank_account,
+                latitude,
+                longitude,
+                profile_pic,
+                role,
+                created_at
+            FROM users 
+            WHERE id = $1::integer
+            AND role IN ('meal_supplier', 'supplier')`,
             [supplierId]
         );
 
-        if (userCheck.rows.length === 0) {
-            console.error(`User ID ${supplierId} not found in database`);
-            return res.status(404).json({ message: 'User not found in database ❌' });
+        // If not found by ID, try by username
+        if (result.rows.length === 0) {
+            console.log(`⚠️ Not found by ID, trying username: ${supplierId}`);
+            result = await pool.query(
+                `SELECT 
+                    id, 
+                    username, 
+                    email, 
+                    phone, 
+                    first_name, 
+                    last_name,
+                    restaurant_name, 
+                    location, 
+                    service_radius_km,
+                    bank_account,
+                    latitude,
+                    longitude,
+                    profile_pic,
+                    role,
+                    created_at
+                FROM users 
+                WHERE username = $1
+                AND role IN ('meal_supplier', 'supplier')`,
+                [supplierId]
+            );
         }
 
-        const user = userCheck.rows[0];
-        console.log(`User ${supplierId} found with role: ${user.role}`);
-
-        // Check if user is a supplier (flexible role matching)
-        if (user.role !== 'meal_supplier' && user.role !== 'supplier') {
-            console.error(`User ${supplierId} is not a supplier. Role: ${user.role}`);
-            return res.status(403).json({ message: 'User is not a supplier ❌' });
+        if (result.rows.length === 0) {
+            console.warn(`⚠️ Supplier ${supplierId} not found or not a supplier`);
+            return res.status(404).json({ message: 'Supplier not found' });
         }
 
-        // ⭐️ Now fetch the full profile
-        const query = `
-            SELECT 
-                id, first_name, last_name, email, phone, profile_pic,
-                restaurant_name, bank_account, location, 
-                latitude, longitude, service_radius_km
-            FROM users
-            WHERE id = $1
-        `;
-        const { rows } = await pool.query(query, [supplierId]);
+        const supplier = result.rows[0];
+        console.log(`✅ Profile found for supplier:`, supplier.username);
 
-        if (rows.length === 0) {
-            return res.status(404).json({ message: 'Supplier profile not found ❌' });
-        }
+        res.json({
+            id: supplier.id,
+            username: supplier.username,
+            email: supplier.email,
+            phone: supplier.phone,
+            first_name: supplier.first_name,
+            last_name: supplier.last_name,
+            restaurant_name: supplier.restaurant_name,
+            location: supplier.location,
+            service_radius_km: supplier.service_radius_km,
+            bank_account: supplier.bank_account,
+            latitude: supplier.latitude,
+            longitude: supplier.longitude,
+            profile_pic: supplier.profile_pic,
+            role: supplier.role,
+            created_at: supplier.created_at
+        });
 
-        res.json(rows[0]);
     } catch (err) {
-        console.error('Error fetching supplier profile:', err);
-        res.status(500).json({ message: `Server error: ${err.message} ❌` });
+        console.error('❌ Error fetching supplier profile:', err.message);
+        res.status(500).json({ message: 'Error fetching supplier profile', error: err.message });
     }
 });
 
-// ⭐️ UPDATE Supplier Profile - Flexible role checking
-router.put('/:id', async (req, res) => {
-    const supplierId = req.params.id;
+/**
+ * PUT /api/supplier/profile/:supplierId
+ * Update supplier profile
+ */
+router.put('/:supplierId', async (req, res) => {
+    const { supplierId } = req.params;
     const { 
         restaurant_name, 
-        bank_account, 
         location, 
-        latitude, 
-        longitude, 
-        service_radius_km 
+        service_radius_km, 
+        bank_account,
+        latitude,
+        longitude
     } = req.body;
 
-    // Validate that ID is a number
-    if (!supplierId || isNaN(supplierId)) {
-        return res.status(400).json({ message: 'Invalid supplier ID ❌' });
-    }
-
-    // Validate required fields for supplier profile
-    if (!restaurant_name || !bank_account || !location || !service_radius_km) {
-        return res.status(400).json({ message: 'Restaurant name, bank account, location, and service radius are required ❌' });
+    if (!supplierId) {
+        return res.status(400).json({ message: 'Supplier ID is required' });
     }
 
     try {
-        // ⭐️ Check user exists and is a supplier
-        const userCheck = await pool.query(
-            'SELECT id, role FROM users WHERE id = $1',
-            [supplierId]
+        console.log(`⬆️ Updating profile for supplier ID: ${supplierId}`);
+
+        // Try updating by numeric ID first
+        let result = await pool.query(
+            `UPDATE users 
+            SET 
+                restaurant_name = COALESCE($1, restaurant_name),
+                location = COALESCE($2, location),
+                service_radius_km = COALESCE($3, service_radius_km),
+                bank_account = COALESCE($4, bank_account),
+                latitude = COALESCE($5, latitude),
+                longitude = COALESCE($6, longitude),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $7::integer
+            AND role IN ('meal_supplier', 'supplier')
+            RETURNING id, username, restaurant_name, location, service_radius_km, bank_account, latitude, longitude`,
+            [restaurant_name, location, service_radius_km, bank_account, latitude, longitude, supplierId]
         );
 
-        if (userCheck.rows.length === 0) {
-            return res.status(404).json({ message: 'User not found ❌' });
+        // If no rows updated, try by username
+        if (result.rowCount === 0) {
+            console.log(`⚠️ Not updated by ID, trying username: ${supplierId}`);
+            result = await pool.query(
+                `UPDATE users 
+                SET 
+                    restaurant_name = COALESCE($1, restaurant_name),
+                    location = COALESCE($2, location),
+                    service_radius_km = COALESCE($3, service_radius_km),
+                    bank_account = COALESCE($4, bank_account),
+                    latitude = COALESCE($5, latitude),
+                    longitude = COALESCE($6, longitude),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE username = $7
+                AND role IN ('meal_supplier', 'supplier')
+                RETURNING id, username, restaurant_name, location, service_radius_km, bank_account, latitude, longitude`,
+                [restaurant_name, location, service_radius_km, bank_account, latitude, longitude, supplierId]
+            );
         }
 
-        const user = userCheck.rows[0];
-        if (user.role !== 'meal_supplier' && user.role !== 'supplier') {
-            return res.status(403).json({ message: 'User is not a supplier ❌' });
+        if (result.rowCount === 0) {
+            console.warn(`⚠️ Supplier ${supplierId} not found or unauthorized`);
+            return res.status(404).json({ message: 'Supplier not found or unauthorized' });
         }
 
-        // ⭐️ Update the profile
-        const updateQuery = `
-            UPDATE users
-            SET restaurant_name = $1,
-                bank_account = $2,
-                location = $3,
-                latitude = $4,
-                longitude = $5,
-                service_radius_km = $6,
-                updated_at = NOW(),
-                last_active = NOW()
-            WHERE id = $7
-            RETURNING id, first_name, last_name, email, phone, restaurant_name, 
-                      bank_account, location, latitude, longitude, service_radius_km
-        `;
-        const { rows } = await pool.query(
-            updateQuery, 
-            [restaurant_name, bank_account, location, latitude, longitude, service_radius_km, supplierId]
-        );
+        const updated = result.rows[0];
+        console.log(`✅ Profile updated for supplier:`, updated.username);
 
-        if (rows.length === 0) {
-            return res.status(404).json({ message: 'Failed to update profile ❌' });
-        }
+        res.json({
+            message: 'Profile updated successfully',
+            profile: {
+                id: updated.id,
+                username: updated.username,
+                restaurant_name: updated.restaurant_name,
+                location: updated.location,
+                service_radius_km: updated.service_radius_km,
+                bank_account: updated.bank_account,
+                latitude: updated.latitude,
+                longitude: updated.longitude
+            }
+        });
 
-        res.json({ message: 'Profile updated ✅', supplier: rows[0] });
     } catch (err) {
-        console.error('Error updating supplier profile:', err);
-        res.status(500).json({ message: `Server error: ${err.message} ❌` });
+        console.error('❌ Error updating supplier profile:', err.message);
+        res.status(500).json({ message: 'Error updating supplier profile', error: err.message });
     }
 });
 
